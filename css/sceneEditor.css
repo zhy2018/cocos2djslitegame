@@ -1,0 +1,142 @@
+body {
+	margin: auto;
+	background-color: #001935;
+	color: #d0e9ff;
+	font-size: 14px;
+	cursor: default;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+#mainTable {
+	width: 100%;
+	height: 100vh;
+}
+#workTable {
+	position: absolute;
+}
+#content {
+	vertical-align: top;
+}
+#contentBody {
+	position: relative;
+	overflow: hidden;
+}
+#grid {
+	overflow: auto;
+	cursor: url(../res/img/brush.png), default;
+}
+.toolbar {
+	height: 44px;
+	border-bottom: 2px solid #1DB0B8;
+}
+.toolbarBody {
+	height: 44px;
+	line-height: 44px;
+	overflow: hidden;
+}
+.toolbarBody span {
+	font-size: 24px;
+	margin-left: 16px;
+	transition: all 0.4s;
+}
+.toolbarBody span:hover {
+	/* transform: scale(1.2); */
+}
+#rightCol {
+	width: 256px;
+	border-left: 2px solid #1DB0B8;
+	vertical-align: top;
+}
+#div_container {
+	width: 256px;
+	overflow: auto;
+}
+#div_img {
+	background-repeat: no-repeat;
+	position: relative;
+}
+#div_selectBox, #div_selectedBox, #div_workerBox {
+	left: 0px;
+	top: 0px;
+	width: 16px;
+	height: 16px;
+	position: absolute;
+	border: 1px solid #91D5FF;
+	animation: changeColor 3s infinite;
+	-webkit-animation: changeColor 3s infinite;
+	display: none;
+}
+#div_selectBox {
+	border-style: dashed;
+}
+
+.div_tile {
+	border: 1px solid rgba(145, 213, 255, 0.08);
+	transition: border-color 0.2s;
+	background-repeat: no-repeat;
+}
+
+#inp_load, #inp_import {
+	width: 32px;
+	opacity: 0.02;
+	overflow: hidden;
+}
+
+#errMsg {
+	color: orangered;
+	position: absolute;
+}
+
+@keyframes changeColor {
+	0% { border-color: #91d5ff; }
+	8% { border-color: #1890ff; }
+	16% { border-color: #b7eb8f; }
+	24% { border-color: #52c41a; }
+ 	32% { border-color: #FF7F50; }
+ 	40% { border-color: #8B4513; }
+	48% { border-color: #FF00FF; }
+	56% { border-color: #800080; }
+	64% { border-color: #ffa39e; }
+	72% { border-color: #f5222d; }
+	80% { border-color: #ffe58f; }
+	88% { border-color: #faad14; }
+	96% { border-color: #91d5ff; }
+	100% { border-color: #91d5ff; }
+}
+@-webkit-keyframes changeColor {
+	0% { border-color: #91d5ff; }
+	8% { border-color: #1890ff; }
+	16% { border-color: #b7eb8f; }
+	24% { border-color: #52c41a; }
+ 	32% { border-color: #FF7F50; }
+ 	40% { border-color: #8B4513; }
+	48% { border-color: #FF00FF; }
+	56% { border-color: #800080; }
+	64% { border-color: #ffa39e; }
+	72% { border-color: #f5222d; }
+	80% { border-color: #ffe58f; }
+	88% { border-color: #faad14; }
+	96% { border-color: #91d5ff; }
+	100% { border-color: #91d5ff; }
+}
+
+@font-face {
+	font-family: 'iconfont';
+	src: url('iconfont.ttf') format('truetype');
+}
+.iconfont {
+	font-family: "iconfont" !important;
+	font-size: 16px;
+	font-style: normal;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.dotLine {
+	width: 100%;
+	height: 1px;
+	background-image: linear-gradient(to right, #ccc 0%, #ccc 50%, transparent 50%);
+	background-size: 8px 1px;
+	background-repeat: repeat-x;
+}
