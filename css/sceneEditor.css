@@ -1,7 +1,7 @@
 body {
 	margin: auto;
-	background-color: #001935;
-	color: #d0e9ff;
+	background-color: #000033;
+	color: #009999;
 	font-size: 14px;
 	cursor: default;
 	user-select: none;
@@ -28,7 +28,7 @@ body {
 }
 .toolbar {
 	height: 44px;
-	border-bottom: 2px solid #1DB0B8;
+	border-bottom: 2px solid #009999;
 }
 .toolbarBody {
 	height: 44px;
@@ -38,14 +38,14 @@ body {
 .toolbarBody span {
 	font-size: 24px;
 	margin-left: 16px;
-	transition: all 0.4s;
+	transition: all 0.2s;
 }
 .toolbarBody span:hover {
-	/* transform: scale(1.2); */
+	color: #00ffff;
 }
 #rightCol {
 	width: 256px;
-	border-left: 2px solid #1DB0B8;
+	border-left: 2px solid #009999;
 	vertical-align: top;
 }
 #div_container {

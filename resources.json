@@ -1,3 +1,7 @@
 {
-	"scene0": "res/json/威洛之旅雪地.json"
+	"scene0": "res/json/威洛之旅雪地.json",
+	"kodFighterGo": "res/img/kod_fighter/08032239_w51h70n8.png",
+	"kodFighterHit": "res/img/kod_fighter/08032325_w118h77n7.png",
+	"kodFighterHitLow": "res/img/kod_fighter/08040048_w111h64n7.png",
+	"kodFighterOther": "res/img/kod_fighter/08040143_w77h100n12.png"
 }
