@@ -63,8 +63,8 @@ body {
 	height: 16px;
 	position: absolute;
 	border: 1px solid #91D5FF;
-	animation: changeColor 3s infinite;
-	-webkit-animation: changeColor 3s infinite;
+	animation: changeColor 6s infinite;
+	-webkit-animation: changeColor 6s infinite;
 	display: none;
 }
 #div_selectBox {
@@ -75,6 +75,14 @@ body {
 	border: 1px solid rgba(145, 213, 255, 0.08);
 	transition: border-color 0.2s;
 	background-repeat: no-repeat;
+	overflow: hidden;
+	line-height: 50%;
+	font-size: 24px;
+	text-align: center;
+	color: red;
+}
+.div_tile>div {
+	transform: rotateZ(45deg);
 }
 
 #inp_load, #inp_import {

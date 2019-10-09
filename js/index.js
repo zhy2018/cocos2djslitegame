@@ -1,13 +1,42 @@
-// 全局变量
-var Context;
+// 全局变量(注意首字母是大写)
+var Context; // 上下文
+var Res = {}; // 资源
+// 窗口(设备屏幕)尺寸
 var WinSize = {
 	width: 0,
 	height: 0,
 };
-var SceneData = [];
-var Direction = 0; // 1上, 5下, 2左, 4右
-var Step = 2;	// 精灵每次移动的步长值
-var Sprite, Animate, Action;
+var TileSize = 16; // 瓦片尺寸(像素)
+var Map = {
+	scene: [], // 场景层数组, 存放当前场景里的所有瓦片(贴图)数据
+	role: [], // 角色层数组, 存放当前场景里的玩家控制的英雄和电脑控制的敌人
+	bullet: [], // 子弹层数组, 存放当前场景里所有飞来飞去的子弹
+	goods: [], // 物品层数组, 存放当前场景里的所有能被英雄吃掉的物品(道具)
+};
+// 角色原型
+var RoleProto = {
+	direction: 0, // 精灵移动的方向: 1上, 5下, 2左, 4右
+	status: 1, // 精灵状态
+	step: 2, // 精灵每次移动的步长值
+	tileLeft: 0, // 精灵所在的格子
+	tileTop: 0,
+	tileWidth: 1, // 精灵所占几个格子
+	tileHeight: 1,
+	sprite: {},
+	action: {},
+	value: {
+		life: 1,
+		hp: 100,
+		mp: 100,
+		money: 0,
+		speed: 1,
+		attack: 40,
+		defense: 0,
+		level: 1,
+		name: '',
+	},
+};
+var Roles = []; // 角色们
 
 // 执行入口
 window.onload = function () {
@@ -20,12 +49,13 @@ window.onload = function () {
     cc.audioEngine.setEffectsVolume(0.2);
 
 		cc.loader.loadJson('resources.json', function(_, data) {
-			var res = [];
-			for (var i in data) {
-				res.push(data[i]);
+			Res = data;
+			var resArr = [];
+			for (var i in Res) {
+				resArr.push(Res[i]);
 			}
 
-			cc.LoaderScene.preload(res, function () {
+			cc.LoaderScene.preload(resArr, function () {
 				var scene = cc.Scene.extend({
 					onEnter: function () {
 						Context = this;
@@ -33,13 +63,12 @@ window.onload = function () {
 						Context.scheduleUpdate();
 
 						// 加载并绘制场景
-						cc.loader.loadJson(data.scene0, function(_, data) {
-							SceneData = data[1];
+						cc.loader.loadJson(Res.scene0, function(_, data) {
+							Map.scene = data[1];
 							funcDrawScene(data[0]);
 						});
 
-						// 创建玩家控制的精灵
-						funcMakePlayerSprite(data);
+						funcRoleAdd('player'); // 创建玩家控制的精灵
 
 						// 处理按键
 						var mapping = {
@@ -63,7 +92,7 @@ window.onload = function () {
 									Sprite.stopAction(Action);
 									Action = 0;
 								}
-								Sprite.texture = data.kodFighterOther;
+								Sprite.texture = Res.kodFighterOther;
 								Sprite.setTextureRect(cc.rect(0, 0, 45, 68));
 							},
 						}, Context);
@@ -114,19 +143,17 @@ function funcRun() {
 
 // 绘制场景
 function funcDrawScene(dataImg) {
-	var tileSize = 16;
-
-	for (var row = 0; row < SceneData.length; row += 1) {
-		for (var col = 0; col < SceneData[row].length; col += 1) {
-			var item = SceneData[row][col];
+	for (var row = 0; row < Map.scene.length; row += 1) {
+		for (var col = 0; col < Map.scene[row].length; col += 1) {
+			var item = Map.scene[row][col];
 			if (!item) continue;
 
 			var left = item.split(',')[0];
 			var top = item.split(',')[1];
-			var sprite = cc.Sprite.create(dataImg, cc.rect(left * tileSize, top * tileSize, tileSize, tileSize));
+			var sprite = cc.Sprite.create(dataImg, cc.rect(left * TileSize, top * TileSize, TileSize, TileSize));
 			sprite.attr({
-				x: col * tileSize,
-				y: WinSize.height - row * tileSize,
+				x: col * TileSize,
+				y: WinSize.height - row * TileSize,
 				anchorX: 0,
 				anchorY: 1,
 			});
@@ -135,10 +162,23 @@ function funcDrawScene(dataImg) {
 	}
 }
 
-// 创建玩家控制的精灵
-function funcMakePlayerSprite(dataRes) {
+// 添加一个角色
+function funcRoleAdd(roleType) {
+	switch (roleType) {
+		case 'player':
+			break;
+
+		case 'player2':
+			break;
+
+		case 'enemy':
+			break;
+
+		default:
+			break;
+	}
 	// 精灵的站立状态
-	var imgPath = dataRes.kodFighterOther;
+	var imgPath = Res.kodFighterOther;
 	Sprite = cc.Sprite.create(imgPath, cc.rect(0, 0, 45, 68));
 	Sprite.attr({
 		x: WinSize.width / 2,
@@ -153,7 +193,7 @@ function funcMakePlayerSprite(dataRes) {
 		height: 0,
 		number: 0,
 	};
-	imgPath = dataRes.kodFighterGo;
+	imgPath = Res.kodFighterGo;
 	var a = imgPath.split('_');
 	a = a[a.length - 1];
 	a = a.split('.')[0];

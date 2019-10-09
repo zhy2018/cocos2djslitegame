@@ -2,7 +2,7 @@
 var TileSize = 16;
 var B64 = '';
 var SceneData = [];
-var Action = 1;	// 1: 绘制, 2: 擦除, 3: 选取, 0: 什么也不干
+var Action = 1; // 1: 绘制, 2: 擦除, 3: 选取, 0: 什么也不干
 var Working = false;
 var SelectBox = {
 	left: 0,
@@ -82,11 +82,11 @@ window.onload = function() {
 			domWorkerBox.style.left = left * TileSize + 'px';
 			domWorkerBox.style.top = top * TileSize + 'px';
 			domWorkerBox.style.display = 'block';
-		} else domWorkerBox.style.display = 'none';
+		} else if (Action !== 3) domWorkerBox.style.display = 'none';
 	};
 	domContentBody.onmouseout = function() {
 		if (Action === 3 && Shift) return;
-		domWorkerBox.style.display = 'none';
+		else if (Action !== 3) domWorkerBox.style.display = 'none';
 	};
 
 	// 场景素材选择
@@ -208,17 +208,19 @@ window.onload = function() {
 				// 根据场景数据生成场景贴图
 				for (var i = 0; i < SceneData.length; i += 1) {
 					for (var j = 0; j < SceneData[i].length; j += 1) {
-						var item = SceneData[i][j];
-						if (!item) continue;
+						var value = SceneData[i][j];
+						if (!value) continue;
 						
 						var tileId = 'tile' + i + '_' + j;
 						var domTile = document.getElementById(tileId);
 						if (!domTile) continue;
 						
-						var left = item.split(',')[0];
-						var top = item.split(',')[1];
+						var val = value.split(',');
+						var left = val[0];
+						var top = val[1];
 						domTile.style.backgroundImage = 'url(' + B64 + ')';
 						domTile.style.backgroundPosition = -(left * TileSize) + 'px ' + -(top * TileSize) + 'px';
+						if (val.length >= 3 && val[2]) domTile.innerHTML = '<div>+</div>'; // 设置可通行性视情况而定
 					}
 				}
 			}
@@ -309,14 +311,23 @@ function funcWorking(e) {
 
 			case 3:
 				// 选择
+				var domWorkerBox = document.getElementById('div_workerBox');
 				if (Shift) {
-					var domWorkerBox = document.getElementById('div_workerBox');
 					var left0 = parseInt(domWorkerBox.style.left) / TileSize;
 					var top0 = parseInt(domWorkerBox.style.top) / TileSize;
 					var width = Math.abs(left - left0);
 					var height = Math.abs(top - top0);
 					domWorkerBox.style.width = (width + 1) * TileSize + 'px';
 					domWorkerBox.style.height = (height + 1) * TileSize + 'px';
+				} else {
+					// 设置瓦片能否通行
+					if (SceneData[top][left]) {
+						// 只对有贴图的瓦片进行设置(忽略空地)
+						var width = parseInt(domWorkerBox.style.width) / TileSize;
+						var height = parseInt(domWorkerBox.style.height) / TileSize;
+						if (e.textContent) funcSetWalkable(left, top, width, height, true); // 设置为可通行
+						else funcSetWalkable(left, top, width, height, false); // 设置为不可通行
+					}
 				}
 				break;
 
@@ -351,6 +362,7 @@ function funcEraseTile(left, top, width, height) {
 			var domTile = DomGrid.rows[row + top].cells[col + left].children[0];
 			if (!domTile) continue;
 			domTile.style.backgroundImage = 'none';
+			domTile.textContent = '';
 			SceneData[row + top][col + left] = 0;
 		}
 	}
@@ -377,21 +389,52 @@ function funcPasteTile(left, top) {
 	for (var row = 0; row < height; row += 1) {
 		for (var col = 0; col < width; col += 1) {
 			if (row + top >= SceneData.length || col + left >= SceneData[0].length) continue;
-			var item = Clipboard[row][col];
+			var value = Clipboard[row][col];
 			var domTile = DomGrid.rows[row + top].cells[col + left].children[0];
 			if (!domTile) continue;
-			if (item) {
+			if (value) {
 				// 有瓦片
-				var left2 = item.split(',')[0] - 0;
-				var top2 = item.split(',')[1] - 0;
+				SceneData[row + top][col + left] = value;
+				var val = value.split(',');
+				var left2 = val[0] - 0;
+				var top2 = val[1] - 0;
 				domTile.style.backgroundImage = 'url(' + B64 + ')';
 				domTile.style.backgroundPosition = -left2 * TileSize + 'px ' + -top2 * TileSize + 'px';
-				SceneData[row + top][col + left] = item;
+				if (val.length >= 3 && val[2]) domTile.innerHTML = '<div>+</div>'; // 设置可通行性视情况而定
 			} else {
 				// 空位置
 				domTile.style.backgroundImage = 'none';
 				SceneData[row + top][col + left] = 0;
 			}
+		}
+	}
+}
+
+// 设置瓦片能否通行
+function funcSetWalkable(left, top, width, height, walkable) {
+	for (var row = 0; row < height; row += 1) {
+		for (var col = 0; col < width; col += 1) {
+			if (row + top >= SceneData.length || col + left >= SceneData[0].length) continue;
+			var domTile = DomGrid.rows[row + top].cells[col + left].children[0];
+			if (!domTile) continue;
+
+			var value = SceneData[row + top][col + left];
+			// 只对有贴图的瓦片进行设置(忽略空地)
+			if (!value) continue;
+
+			var val = value.split(',');
+			if (walkable) {
+				// 设置为可通行
+				domTile.textContent = '';
+				if (val.length === 3) val.splice(2, 1);
+				else if (val.length === 4) val[2] = 0;
+			} else {
+				// 设置为不可通行
+				domTile.innerHTML = '<div>+</div>';
+				if (val.length === 2) val.push(1);
+				else if (val.length === 4) val[2] = 1;
+			}
+			SceneData[row + top][col + left] = val.toString();
 		}
 	}
 }
