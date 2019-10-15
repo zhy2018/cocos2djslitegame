@@ -7,12 +7,16 @@ var WinSize = {
 	height: 0,
 };
 var TileSize = 16; // 瓦片尺寸(像素)
-var Map = {
-	scene: [], // 场景层数组, 存放当前场景里的所有瓦片(贴图)数据
-	role: [], // 角色层数组, 存放当前场景里的玩家控制的英雄和电脑控制的敌人
-	bullet: [], // 子弹层数组, 存放当前场景里所有飞来飞去的子弹
-	goods: [], // 物品层数组, 存放当前场景里的所有能被英雄吃掉的物品(道具)
-};
+var MapTile = []; // 地图数组
+var MapRole = [];
+var MapBullet = [];
+var MapGoods = [];
+var LayerTile = []; // 精灵层
+var LayerRole = [];
+var LayerBullet = [];
+var LayerGoods = [];
+var Ani = {}; // 动画
+var Act = {}; // 动作
 // 角色原型
 var RoleProto = {
 	direction: 0, // 精灵移动的方向: 1上, 5下, 2左, 4右
@@ -44,7 +48,11 @@ window.onload = function () {
 		WinSize = cc.director.getWinSize();
     cc.view.adjustViewPort(true);
     cc.view.resizeWithBrowserSize(true);
-    cc.view.setDesignResolutionSize(WinSize.width, WinSize.height, cc.ResolutionPolicy.SHOW_ALL);
+    cc.view.setDesignResolutionSize(
+      WinSize.width,
+      WinSize.height,
+      cc.ResolutionPolicy.SHOW_ALL
+    );
     cc.audioEngine.setMusicVolume(0.2);
     cc.audioEngine.setEffectsVolume(0.2);
 
@@ -62,9 +70,19 @@ window.onload = function () {
 						Context._super();
 						Context.scheduleUpdate();
 
-						// 加载并绘制场景
+						// 初始化精灵层
+						LayerTile = cc.Layer.create();
+						LayerRole = cc.Layer.create();
+						LayerBullet = cc.Layer.create();
+						LayerGoods = cc.Layer.create();
+						Context.addChild(LayerTile);
+						Context.addChild(LayerRole);
+						Context.addChild(LayerBullet);
+						Context.addChild(LayerGoods);
+
+						// 加载并绘制场景(地块)
 						cc.loader.loadJson(Res.scene0, function(_, data) {
-							Map.scene = data[1];
+              MapTile = data[1];
 							funcDrawScene(data[0]);
 						});
 
@@ -82,7 +100,9 @@ window.onload = function () {
 								if (Direction) {
 									// 按下的是方向键
 									if (!Action) {
-										Action = Sprite.runAction(cc.RepeatForever.create(cc.Sequence.create(Animate)));
+										Action = Sprite.runAction(
+										  cc.RepeatForever.create(cc.Sequence.create(Animate))
+                    );
 									}
 								}
 							},
@@ -101,7 +121,7 @@ window.onload = function () {
 						this._super();
 						cc.eventManager.removeListener(cc.EventListener.KEYBOARD);
 					},
-					update: funcRun,
+					// update: funcRun,
 				});
 				cc.director.runScene(new scene());
 			}, this);
@@ -143,21 +163,23 @@ function funcRun() {
 
 // 绘制场景
 function funcDrawScene(dataImg) {
-	for (var row = 0; row < Map.scene.length; row += 1) {
-		for (var col = 0; col < Map.scene[row].length; col += 1) {
-			var item = Map.scene[row][col];
+	for (var row = 0; row < MapTile.length; row += 1) {
+		for (var col = 0; col < MapTile[row].length; col += 1) {
+			var item = MapTile[row][col];
 			if (!item) continue;
 
 			var left = item.split(',')[0];
 			var top = item.split(',')[1];
-			var sprite = cc.Sprite.create(dataImg, cc.rect(left * TileSize, top * TileSize, TileSize, TileSize));
+			var sprite = cc.Sprite.create(
+			  dataImg, cc.rect(left * TileSize, top * TileSize, TileSize, TileSize),
+      );
 			sprite.attr({
 				x: col * TileSize,
 				y: WinSize.height - row * TileSize,
 				anchorX: 0,
 				anchorY: 1,
 			});
-			Context.addChild(sprite);
+			LayerTile.addChild(sprite);
 		}
 	}
 }
@@ -166,6 +188,37 @@ function funcDrawScene(dataImg) {
 function funcRoleAdd(roleType) {
 	switch (roleType) {
 		case 'player':
+      // 精灵的站立状态
+      var imgPath = Res.kodFighterOther;
+      var sprite = cc.Sprite.create(imgPath, cc.rect(0, 0, 45, 68));
+      sprite.attr({
+        x: WinSize.width / 2,
+        y: WinSize.height / 2,
+      });
+      LayerRole.addChild(sprite);
+
+      // 精灵的行走状态
+      // 加载走路图片帧
+      imgPath = Res.kodFighterGo;
+      var a = imgPath.split('_');
+      a = a[a.length - 1];
+      a = a.split('.')[0];
+      var imgInfo = {
+        width: parseInt(a.split('w')[1]),
+        height: parseInt(a.split('h')[1]),
+        number: parseInt(a.split('n')[1]),
+      };
+
+      var ani = cc.Animation.create();
+      for (var i = 0; i < imgInfo.number; i += 1) {
+        var frame = cc.SpriteFrame.create(
+          imgPath, cc.rect(i * imgInfo.width, 0, imgInfo.width, imgInfo.height),
+        );
+        ani.addSpriteFrame(frame);
+      }
+      ani.setDelayPerUnit(0.1);
+      ani.setRestoreOriginalFrame(true);
+      Animate = cc.Animate.create(ani);
 			break;
 
 		case 'player2':
@@ -177,38 +230,4 @@ function funcRoleAdd(roleType) {
 		default:
 			break;
 	}
-	// 精灵的站立状态
-	var imgPath = Res.kodFighterOther;
-	Sprite = cc.Sprite.create(imgPath, cc.rect(0, 0, 45, 68));
-	Sprite.attr({
-		x: WinSize.width / 2,
-		y: WinSize.height / 2,
-	});
-	Context.addChild(Sprite);
-
-	// 精灵的行走状态
-	// 加载走路图片帧
-	var imgInfo = {
-		width: 0,
-		height: 0,
-		number: 0,
-	};
-	imgPath = Res.kodFighterGo;
-	var a = imgPath.split('_');
-	a = a[a.length - 1];
-	a = a.split('.')[0];
-	imgInfo = {
-		width: parseInt(a.split('w')[1]),
-		height: parseInt(a.split('h')[1]),
-		number: parseInt(a.split('n')[1]),
-	};
-
-	var ani = cc.Animation.create();
-	for (var i = 0; i < imgInfo.number; i += 1) {
-		var frame = cc.SpriteFrame.create(imgPath, cc.rect(i * imgInfo.width, 0, imgInfo.width, imgInfo.height));
-		ani.addSpriteFrame(frame);
-	}
-	ani.setDelayPerUnit(0.1);
-	ani.setRestoreOriginalFrame(true);
-	Animate = cc.Animate.create(ani);
 }

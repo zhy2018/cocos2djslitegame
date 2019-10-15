@@ -36,7 +36,7 @@ window.onload = function() {
 					domImg.style.width = img.width + 2 + 'px';
 					domImg.style.height = img.height + 2 + 'px';
 				};
-			}
+			};
 			reader.readAsDataURL(file);
 		}
 	};
@@ -158,16 +158,19 @@ window.onload = function() {
 				var domMsg = document.getElementById('errMsg');
 				var errMsg = '';
 				domMsg.textContent = '';
-				console.log(data.length, data);
 				if (data.length <= 16) {
-					console.log('无效的文件');
-					return;
+          errMsg = '无效的文件';
+          domMsg.textContent = errMsg;
+          console.log(errMsg);
+          return;
 				}
-				if (data.substr(0, 13) !== 'data:;base64,') {
-					console.log('无效的文件');
-					return;
-				}
-				
+				if (data.indexOf('data:') === -1 || data.indexOf(';base64,') === -1) {
+          errMsg = '无效的文件';
+          domMsg.textContent = errMsg;
+          console.log(errMsg);
+          return;
+        }
+
 				data = data.split(',')[1];
 				try {
 					data = base64decode(data);
@@ -201,10 +204,12 @@ window.onload = function() {
 				domImg.style.backgroundImage = 'url(' + B64 + ')';
 				var img = document.createElement('img');
 				img.src = B64;
-				// 加2是因为边框线的宽度
-				domImg.style.width = img.width + 2 + 'px';
-				domImg.style.height = img.height + 2 + 'px';
-				
+				img.onload = function() {
+          // 加2是因为边框线的宽度
+          domImg.style.width = img.width + 2 + 'px';
+          domImg.style.height = img.height + 2 + 'px';
+        };
+
 				// 根据场景数据生成场景贴图
 				for (var i = 0; i < SceneData.length; i += 1) {
 					for (var j = 0; j < SceneData[i].length; j += 1) {
@@ -218,12 +223,14 @@ window.onload = function() {
 						var val = value.split(',');
 						var left = val[0];
 						var top = val[1];
+						var pos = -(left * TileSize + 1) + 'px ' + -(top * TileSize + 1) + 'px';
 						domTile.style.backgroundImage = 'url(' + B64 + ')';
-						domTile.style.backgroundPosition = -(left * TileSize) + 'px ' + -(top * TileSize) + 'px';
-						if (val.length >= 3 && val[2]) domTile.innerHTML = '<div>+</div>'; // 设置可通行性视情况而定
+						domTile.style.backgroundPosition = pos;
+						if (val.length >= 3 && val[2])
+						  domTile.innerHTML = '<div>+</div>'; // 设置可通行性
 					}
 				}
-			}
+			};
 			reader.readAsDataURL(file);
 		}
 	};
@@ -347,8 +354,10 @@ function funcDrawTile(left, top, width, height) {
 			if (row + top >= SceneData.length || col + left >= SceneData[0].length) continue;
 			var domTile = DomGrid.rows[row + top].cells[col + left].children[0];
 			if (!domTile) continue;
+			var pos = -((col + SelectBox.left) * TileSize + 1) + 'px';
+			pos += ' ' + -((row + SelectBox.top) * TileSize + 1) + 'px';
 			domTile.style.backgroundImage = 'url(' + B64 + ')';
-			domTile.style.backgroundPosition = -((col + SelectBox.left) * TileSize) + 'px ' + -((row + SelectBox.top) * TileSize) + 'px';
+			domTile.style.backgroundPosition = pos;
 			SceneData[row + top][col + left] = col + SelectBox.left + ',' + (row + SelectBox.top);
 		}
 	}
@@ -398,9 +407,11 @@ function funcPasteTile(left, top) {
 				var val = value.split(',');
 				var left2 = val[0] - 0;
 				var top2 = val[1] - 0;
+				var pos = -(left2 * TileSize + 1) + 'px ' + -(top2 * TileSize + 1) + 'px';
 				domTile.style.backgroundImage = 'url(' + B64 + ')';
-				domTile.style.backgroundPosition = -left2 * TileSize + 'px ' + -top2 * TileSize + 'px';
-				if (val.length >= 3 && val[2]) domTile.innerHTML = '<div>+</div>'; // 设置可通行性视情况而定
+				domTile.style.backgroundPosition = pos;
+				if (val.length >= 3 && val[2])
+				  domTile.innerHTML = '<div>+</div>'; // 设置可通行性
 			} else {
 				// 空位置
 				domTile.style.backgroundImage = 'none';
