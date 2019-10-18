@@ -4,6 +4,6 @@
   "id": "gameCanvas",
   "renderMode": 1,
   "jsList": [
-		
+    "js/tools.js"
   ]
 }

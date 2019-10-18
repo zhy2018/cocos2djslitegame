@@ -15,32 +15,29 @@ var LayerTile = []; // 精灵层
 var LayerRole = [];
 var LayerBullet = [];
 var LayerGoods = [];
-var Ani = {}; // 动画
-var Act = {}; // 动作
 // 角色原型
 var RoleProto = {
-	direction: 0, // 精灵移动的方向: 1上, 5下, 2左, 4右
-	status: 1, // 精灵状态
+	direction: 'halt',
+	status: 'ok',
 	step: 2, // 精灵每次移动的步长值
 	tileLeft: 0, // 精灵所在的格子
 	tileTop: 0,
 	tileWidth: 1, // 精灵所占几个格子
 	tileHeight: 1,
-	sprite: {},
-	action: {},
-	value: {
-		life: 1,
-		hp: 100,
-		mp: 100,
-		money: 0,
-		speed: 1,
-		attack: 40,
-		defense: 0,
-		level: 1,
-		name: '',
-	},
+  life: 1,
+  hp: 100,
+  mp: 100,
+  money: 0,
+  speed: 1,
+  attack: 40,
+  defense: 0,
+  level: 1,
+  name: '',
+  camp: 'player',
+  id: 0,
 };
 var Roles = []; // 角色们
+var Id = 0; // 主索引, 唯一标识
 
 // 执行入口
 window.onload = function () {
@@ -90,30 +87,44 @@ window.onload = function () {
 
 						// 处理按键
 						var mapping = {
-							87: 1, 83: 5, 65: 2, 68: 4,
-							38: 1, 40: 5, 37: 2, 39: 4,
+							87: 'up', 83: 'down', 65: 'left', 68: 'right',
 						};
 						cc.eventManager.addListener({
 							event: cc.EventListener.KEYBOARD,
 							onKeyPressed: function(keyCode) {
-								Direction = mapping[keyCode];
-								if (Direction) {
+								if (mapping[keyCode]) {
 									// 按下的是方向键
-									if (!Action) {
-										Action = Sprite.runAction(
-										  cc.RepeatForever.create(cc.Sequence.create(Animate))
-                    );
-									}
+                  for (let i = 0; i < Roles.length; i += 1) {
+                    const role = Roles[i];
+                    if (role.camp !== 'player') continue;
+
+                    if (role.status === 'ok') {
+                      role.direction = mapping[keyCode];
+                      if (!role.action) {
+                        role.action = role.sprite.runAction(
+                          cc.RepeatForever.create(cc.Sequence.create(role.animate))
+                        );
+                      }
+                    }
+                    break;
+                  }
 								}
 							},
 							onKeyReleased: function() {
-								Direction = 0;
-								if (Action) {
-									Sprite.stopAction(Action);
-									Action = 0;
-								}
-								Sprite.texture = Res.kodFighterOther;
-								Sprite.setTextureRect(cc.rect(0, 0, 45, 68));
+							  for (let i = 0; i < Roles.length; i += 1) {
+							    const role = Roles[i];
+							    if (role.camp !== 'player') continue;
+
+							    if (role.status === 'ok') {
+							      role.direction = '';
+							      if (role.action) {
+							        role.sprite.stopAction(role.action);
+							        role.action = 0;
+                    }
+                    role.sprite.texture = Res.kodFighterOther;
+							      role.sprite.setTextureRect(cc.rect(0, 0, 45, 68));
+                  }
+                }
 							},
 						}, Context);
 					},
@@ -178,6 +189,7 @@ function funcDrawScene(dataImg) {
 				y: WinSize.height - row * TileSize,
 				anchorX: 0,
 				anchorY: 1,
+        tag: row + '_' + col,
 			});
 			LayerTile.addChild(sprite);
 		}
@@ -186,6 +198,10 @@ function funcDrawScene(dataImg) {
 
 // 添加一个角色
 function funcRoleAdd(roleType) {
+  var role = funcObjectClone(RoleProto);
+  role.id = Id;
+  role.camp = roleType;
+
 	switch (roleType) {
 		case 'player':
       // 精灵的站立状态
@@ -194,8 +210,8 @@ function funcRoleAdd(roleType) {
       sprite.attr({
         x: WinSize.width / 2,
         y: WinSize.height / 2,
+        tag: Id,
       });
-      LayerRole.addChild(sprite);
 
       // 精灵的行走状态
       // 加载走路图片帧
@@ -209,19 +225,16 @@ function funcRoleAdd(roleType) {
         number: parseInt(a.split('n')[1]),
       };
 
-      var ani = cc.Animation.create();
+      var animation = cc.Animation.create();
       for (var i = 0; i < imgInfo.number; i += 1) {
         var frame = cc.SpriteFrame.create(
           imgPath, cc.rect(i * imgInfo.width, 0, imgInfo.width, imgInfo.height),
         );
-        ani.addSpriteFrame(frame);
+        animation.addSpriteFrame(frame);
       }
-      ani.setDelayPerUnit(0.1);
-      ani.setRestoreOriginalFrame(true);
-      Animate = cc.Animate.create(ani);
-			break;
-
-		case 'player2':
+      animation.setDelayPerUnit(0.1);
+      animation.setRestoreOriginalFrame(true);
+      role.animate = cc.Animate.create(animation);
 			break;
 
 		case 'enemy':
@@ -230,4 +243,9 @@ function funcRoleAdd(roleType) {
 		default:
 			break;
 	}
+
+  LayerRole.addChild(sprite);
+	role.sprite = sprite;
+  Roles.push(role);
+  Id += 1;
 }
