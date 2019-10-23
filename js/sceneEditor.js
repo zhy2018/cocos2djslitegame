@@ -45,8 +45,8 @@ window.onload = function() {
 	DomGrid = document.getElementById('grid');
 	var domContent = document.getElementById('content');
 	var domContentBody = document.getElementById('contentBody');
-	var gridWidth = parseInt(domContent.offsetWidth / TileSize);
-	var gridHeight = parseInt(domContent.offsetHeight / TileSize);
+	var gridWidth = 8; // parseInt(domContent.offsetWidth / TileSize);
+	var gridHeight = 8; // parseInt(domContent.offsetHeight / TileSize);
 	domContentBody.style.width = domContent.offsetWidth + 'px';
 	domContentBody.style.height = domContent.offsetHeight + 'px';
 	var html='';
@@ -134,15 +134,13 @@ window.onload = function() {
 	// 存储场景数据到一个json文件
 	var domSave = document.getElementById('btn_save');
 	domSave.onclick = function() {
-		if (B64) {
-			var data = [B64, SceneData];
-			data = JSON.stringify(data);
-			var a = document.createElement('a');
-			var blob = new Blob([data], {type : 'application/json'});
-			a.href = URL.createObjectURL(blob);
-			a.download = FileName.split('.')[0] + '.json';
-			a.click();
-		}
+    var data = [B64, SceneData];
+    data = JSON.stringify(data);
+    var a = document.createElement('a');
+    var blob = new Blob([data], {type : 'application/json'});
+    a.href = URL.createObjectURL(blob);
+    a.download = FileName.split('.')[0] + '.json';
+    a.click();
 	};
 	
 	// 载入场景数据并呈现出来

@@ -72,7 +72,11 @@ window.onload = function () {
 						Context.addChild(LayerGoods);
 
 						cc.loader.loadJson(Res.scene0, function(_, data) {
-              MapTile = data[1];
+              // y轴倒置一下才能把地图正过来
+              for (var i = data[1].length - 1; i >= 0; i -= 1) {
+                var row = data[1][i];
+                MapTile.push(row);
+              }
 							funcDrawScene(data[0]); // 绘制场景(地块)
 
 							// 初始化角色, 子弹, 物品所在层的地图数组
@@ -174,8 +178,10 @@ function funcRun() {
 
     // 检测角色是否越界
     if (
-      proboX < 0 || proboX + role.tileWidth * TileSize > MapTile[0].length * TileSize ||
-      probeY < 0 || probeY + role.tileHeight * TileSize > MapTile.length * TileSize
+      proboX - role.sprite.width / 2 < 0 ||
+      proboX + role.sprite.width / 2 > MapTile[0].length * TileSize ||
+      probeY < 0 ||
+      probeY + role.sprite.height > MapTile.length * TileSize
     ) continue;
 
     // 检测角色是否碰到了墙(砖)
@@ -183,12 +189,18 @@ function funcRun() {
     var top = probeY / TileSize;
     left = left.toFixed() - 0;
     top = top.toFixed() - 0;
-    cc.log(MapTile[top][left], MapTile[top][left + role.tileWidth], MapTile[top + role.tileHeight][left], MapTile[top + role.tileHeight][left + role.tileWidth]);
+    var half = parseInt(role.tileWidth / 2);
+    cc.log(
+      MapTile[top][left - half],
+      MapTile[top][left + half],
+      MapTile[top + role.tileHeight][left - half],
+      MapTile[top + role.tileHeight][left + half],
+    );
     if (
-      MapTile[top][left] ||
-      MapTile[top][left + role.tileWidth] ||
-      MapTile[top + role.tileHeight][left] ||
-      MapTile[top + role.tileHeight][left + role.tileWidth]
+      MapTile[top][left - half] ||
+      MapTile[top][left + half] ||
+      MapTile[top + role.tileHeight][left - half] ||
+      MapTile[top + role.tileHeight][left + half]
     ) continue;
 
     role.sprite.x = proboX;
@@ -218,13 +230,13 @@ function funcDrawScene(dataImg) {
 			var left = item.split(',')[0];
 			var top = item.split(',')[1];
 			var sprite = cc.Sprite.create(
-			  dataImg, cc.rect(left * TileSize, top * TileSize, TileSize, TileSize),
+			  dataImg, cc.rect(left * TileSize, top * TileSize, TileSize, TileSize)
       );
 			sprite.attr({
 				x: col * TileSize,
-				y: WinSize.height - row * TileSize,
+				y: row * TileSize,
 				anchorX: 0,
-				anchorY: 1,
+				anchorY: 0,
         tag: row + '_' + col,
 			});
 			LayerTile.addChild(sprite);
@@ -244,13 +256,15 @@ function funcRoleAdd(roleType) {
 		  var height = 68 / TileSize;
 		  role.tileWidth = width.toFixed() - 0;
 		  role.tileHeight = height.toFixed() - 0;
+		  role.tileLeft = 2;
+		  role.tileTop = 1;
 		  // role.tileLeft = parseInt(MapTile[0].length / 2);
 		  // role.tileTop = parseInt(MapTile.length / 2);
 
 		  // 在角色层地图数组上标记角色的标识(id)
 		  for (var i = 0; i < role.tileHeight; i += 1) {
 		    for (var j = 0; j < role.tileWidth; j += 1) {
-		      MapRole[role.tileTop + i][role.tileLeft + j] = role.id;
+		      MapRole[role.tileTop + i][role.tileLeft - parseInt(role.tileWidth / 2) + j] = role.id;
         }
       }
 
@@ -259,7 +273,6 @@ function funcRoleAdd(roleType) {
       var sprite = cc.Sprite.create(imgPath, cc.rect(0, 0, 45, 68));
       sprite.attr({
         tag: Id,
-        anchorX: 0,
         anchorY: 0,
         x: role.tileLeft * TileSize,
         y: role.tileTop * TileSize,
@@ -280,7 +293,7 @@ function funcRoleAdd(roleType) {
       var animation = cc.Animation.create();
       for (var i = 0; i < imgInfo.number; i += 1) {
         var frame = cc.SpriteFrame.create(
-          imgPath, cc.rect(i * imgInfo.width, 0, imgInfo.width, imgInfo.height),
+          imgPath, cc.rect(i * imgInfo.width, 0, imgInfo.width, imgInfo.height)
         );
         animation.addSpriteFrame(frame);
       }
