@@ -185,17 +185,9 @@ function funcRun() {
     ) continue;
 
     // 检测角色是否碰到了墙(砖)
-    var left = proboX / TileSize;
-    var top = probeY / TileSize;
-    left = left.toFixed() - 0;
-    top = top.toFixed() - 0;
+    var left = parseInt(proboX / TileSize);
+    var top = parseInt(probeY / TileSize);
     var half = parseInt(role.tileWidth / 2);
-    cc.log(
-      MapTile[top][left - half],
-      MapTile[top][left + half],
-      MapTile[top + role.tileHeight][left - half],
-      MapTile[top + role.tileHeight][left + half],
-    );
     if (
       MapTile[top][left - half] ||
       MapTile[top][left + half] ||
@@ -257,9 +249,7 @@ function funcRoleAdd(roleType) {
 		  role.tileWidth = width.toFixed() - 0;
 		  role.tileHeight = height.toFixed() - 0;
 		  role.tileLeft = 2;
-		  role.tileTop = 1;
-		  // role.tileLeft = parseInt(MapTile[0].length / 2);
-		  // role.tileTop = parseInt(MapTile.length / 2);
+		  role.tileTop = 4;
 
 		  // 在角色层地图数组上标记角色的标识(id)
 		  for (var i = 0; i < role.tileHeight; i += 1) {
