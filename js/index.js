@@ -35,6 +35,10 @@ var RoleProto = {
   name: '',
   camp: 'player',
   id: 1,
+  jump: false,
+  jumpStart: 10,
+  jumpSpeed: 0,
+  gravity: 0.5,
 };
 var Roles = []; // 角色们
 var Id = 1; // 主索引, 唯一标识
@@ -77,7 +81,28 @@ window.onload = function () {
                 var row = data[1][i];
                 MapTile.push(row);
               }
-							funcDrawScene(data[0]); // 绘制场景(地块)
+
+							// 绘制场景(地块)
+              for (var row = 0; row < MapTile.length; row += 1) {
+                for (var col = 0; col < MapTile[row].length; col += 1) {
+                  var item = MapTile[row][col];
+                  if (!item) continue;
+
+                  var left = item.split(',')[0];
+                  var top = item.split(',')[1];
+                  var sprite = cc.Sprite.create(
+                    data[0], cc.rect(left * TileSize, top * TileSize, TileSize, TileSize)
+                  );
+                  sprite.attr({
+                    x: col * TileSize,
+                    y: row * TileSize,
+                    anchorX: 0,
+                    anchorY: 0,
+                    tag: row + '_' + col,
+                  });
+                  LayerTile.addChild(sprite);
+                }
+              }
 
 							// 初始化角色, 子弹, 物品所在层的地图数组
               for (var i = 0; i < MapTile.length; i += 1) {
@@ -96,31 +121,50 @@ window.onload = function () {
 
 						// 处理按键
 						var mapping = {
-							87: 'up', 83: 'down', 65: 'left', 68: 'right',
+							65: 'left', 68: 'right',
 						};
 						cc.eventManager.addListener({
 							event: cc.EventListener.KEYBOARD,
 							onKeyPressed: function(keyCode) {
 								if (mapping[keyCode]) {
-									// 按下的是方向键
+									// 按下的是左右键
                   for (var i = 0; i < Roles.length; i += 1) {
                     var role = Roles[i];
-                    if (role.camp !== 'player') continue;
-                    if (role.status !== 'ok') break;
+                    if (role.camp !== 'player' || role.status !== 'ok') continue;
                     role.direction = mapping[keyCode];
-                    if (role.action) break;
+                    if (role.action) continue;
                     role.action = role.sprite.runAction(
                       cc.RepeatForever.create(cc.Sequence.create(role.animate))
                     );
                     break;
                   }
-								}
+								} else {
+								  // 按下了其它键
+                  switch (keyCode) {
+                    case 74:
+                      // 普攻
+                      break;
+                    case 75:
+                      // 跳跃
+                      for (var i = 0; i < Roles.length; i += 1) {
+                        var role = Roles[i];
+                        if (role.camp !== 'player' || role.status !== 'ok' || role.jump) continue;
+                        role.jump = true;
+                        role.jumpSpeed = role.jumpStart;
+                        role.direction = 'up';
+                      }
+                      break;
+                    default:
+                      break;
+                  }
+                }
 							},
-							onKeyReleased: function() {
+							onKeyReleased: function(keyCode) {
 							  for (var i = 0; i < Roles.length; i += 1) {
 							    var role = Roles[i];
-							    if (role.camp !== 'player') continue;
-							    if (role.status !== 'ok') break;
+							    if (role.camp !== 'player' || role.status !== 'ok') continue;
+                  if (!mapping[keyCode]) continue;
+                  // 释放的是左右键
                   role.direction = 'halt';
                   role.sprite.texture = Res.kodFighterOther;
                   role.sprite.setTextureRect(cc.rect(0, 0, 45, 68));
@@ -136,7 +180,103 @@ window.onload = function () {
 						this._super();
 						cc.eventManager.removeListener(cc.EventListener.KEYBOARD);
 					},
-					update: funcRun,
+					update: function() {
+					  // 实时运行
+            for (var i = 0; i < Roles.length; i += 1) {
+              var role = Roles[i];
+              if (role.status !== 'ok') continue;
+
+              // 碰撞检测
+              var collision = false;
+              var proboX = role.sprite.x;
+              var probeY = role.sprite.y;
+              var half = parseInt(role.tileWidth / 2);
+
+              switch (role.direction) {
+                case 'up':
+                  probeY += role.jumpSpeed;
+                  role.jumpSpeed -= role.gravity;
+                  if (role.jumpSpeed < 0) role.direction = 'down';
+
+                  // 检测角色是否越界
+                  // 检测角色是否碰到了墙(砖)
+                  var left = parseInt(proboX / TileSize);
+                  var top = parseInt(probeY / TileSize);
+                  if (probeY + role.sprite.height > MapTile.length * TileSize) collision = true;
+                  else if (
+                    MapTile[top + role.tileHeight][left - half] ||
+                    MapTile[top + role.tileHeight][left + half]
+                  ) {
+                    collision = true;
+                    role.jumpSpeed = 0;
+                    role.direction = 'down';
+                  }
+                  break;
+                case 'down':
+                  probeY -= role.jumpSpeed;
+                  role.jumpSpeed += role.gravity;
+                  if (role.jumpSpeed > TileSize) role.jumpSpeed = TileSize;
+
+                  var left = parseInt(proboX / TileSize);
+                  var top = parseInt(probeY / TileSize);
+                  if (probeY < 0) collision = true;
+                  else if (
+                    MapTile[top][left - half] ||
+                    MapTile[top][left + half]
+                  ) {
+                    collision = true;
+                    role.jump = false;
+                    role.direction = 'halt';
+                    role.tileTop = top.toFixed() - 0 + 1;
+                    role.sprite.y = role.tileTop * TileSize;
+                  }
+                  break;
+                case 'left':
+                  if (!role.sprite.flippedX) role.sprite.flippedX = true;
+                  else proboX -= role.step;
+
+                  var left = parseInt(proboX / TileSize);
+                  var top = parseInt(probeY / TileSize);
+                  if (proboX - role.sprite.width / 2 < 0) collision = true;
+                  else if (
+                    MapTile[top][left - half] ||
+                    MapTile[top + role.tileHeight][left - half]
+                  ) collision = true;
+                  break;
+                case 'right':
+                  if (role.sprite.flippedX) role.sprite.flippedX = false;
+                  else proboX += role.step;
+
+                  var left = parseInt(proboX / TileSize);
+                  var top = parseInt(probeY / TileSize);
+                  if (proboX + role.sprite.width / 2 > MapTile[0].length * TileSize) collision = true;
+                  else if (
+                    MapTile[top][left + half] ||
+                    MapTile[top + role.tileHeight][left + half]
+                  ) collision = true;
+                  break;
+                default:
+                  break;
+              }
+
+              if (collision) continue;
+
+              role.sprite.x = proboX;
+              role.sprite.y = probeY;
+
+              // 更新角色在地图上所处的位置
+              left = role.sprite.x / TileSize;
+              top = role.sprite.y / TileSize;
+              role.tileLeft = left.toFixed() - 0;
+              role.tileTop = top.toFixed() - 0;
+
+              for (var i = 0; i < role.tileHeight; i += 1) {
+                for (var j = 0; j < role.tileWidth; j += 1) {
+                  MapRole[role.tileTop + i][role.tileLeft + j] = role.id;
+                }
+              }
+            }
+          },
 				});
 				cc.director.runScene(new scene());
 			}, this);
@@ -144,97 +284,6 @@ window.onload = function () {
   };
   cc.game.run("gameCanvas");
 };
-
-// 实时运行
-function funcRun() {
-  for (var i = 0; i < Roles.length; i += 1) {
-    var role = Roles[i];
-    if (role.status !== 'ok' || role.direction === 'halt') continue;
-
-    var step = role.step;
-
-    // 碰撞检测
-    var proboX = role.sprite.x;
-    var probeY = role.sprite.y;
-
-    switch (role.direction) {
-      case 'up':
-        probeY += step;
-        break;
-      case 'down':
-        probeY -= step;
-        break;
-      case 'left':
-        if (!role.sprite.flippedX) role.sprite.flippedX = true;
-        else proboX -= step;
-        break;
-      case 'right':
-        if (role.sprite.flippedX) role.sprite.flippedX = false;
-        else proboX += step;
-        break;
-      default:
-        break;
-    }
-
-    // 检测角色是否越界
-    if (
-      proboX - role.sprite.width / 2 < 0 ||
-      proboX + role.sprite.width / 2 > MapTile[0].length * TileSize ||
-      probeY < 0 ||
-      probeY + role.sprite.height > MapTile.length * TileSize
-    ) continue;
-
-    // 检测角色是否碰到了墙(砖)
-    var left = parseInt(proboX / TileSize);
-    var top = parseInt(probeY / TileSize);
-    var half = parseInt(role.tileWidth / 2);
-    if (
-      MapTile[top][left - half] ||
-      MapTile[top][left + half] ||
-      MapTile[top + role.tileHeight][left - half] ||
-      MapTile[top + role.tileHeight][left + half]
-    ) continue;
-
-    role.sprite.x = proboX;
-    role.sprite.y = probeY;
-
-    // 更新角色在地图上所处的位置
-    left = role.sprite.x / TileSize;
-    top = role.sprite.y / TileSize;
-    role.tileLeft = left.toFixed() - 0;
-    role.tileTop = top.toFixed() - 0;
-
-    for (var i = 0; i < role.tileHeight; i += 1) {
-      for (var j = 0; j < role.tileWidth; j += 1) {
-        MapRole[role.tileTop + i][role.tileLeft + j] = role.id;
-      }
-    }
-  }
-}
-
-// 绘制场景
-function funcDrawScene(dataImg) {
-	for (var row = 0; row < MapTile.length; row += 1) {
-		for (var col = 0; col < MapTile[row].length; col += 1) {
-			var item = MapTile[row][col];
-			if (!item) continue;
-
-			var left = item.split(',')[0];
-			var top = item.split(',')[1];
-			var sprite = cc.Sprite.create(
-			  dataImg, cc.rect(left * TileSize, top * TileSize, TileSize, TileSize)
-      );
-			sprite.attr({
-				x: col * TileSize,
-				y: row * TileSize,
-				anchorX: 0,
-				anchorY: 0,
-        tag: row + '_' + col,
-			});
-			LayerTile.addChild(sprite);
-		}
-	}
-}
 
 // 添加一个角色
 function funcRoleAdd(roleType) {
