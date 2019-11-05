@@ -151,7 +151,6 @@ window.onload = function () {
                         if (role.camp !== 'player' || role.status !== 'ok' || role.jump) continue;
                         role.jump = true;
                         role.jumpSpeed = role.jumpStart;
-                        role.direction = 'up';
                       }
                       break;
                     default:
@@ -193,44 +192,6 @@ window.onload = function () {
               var half = parseInt(role.tileWidth / 2);
 
               switch (role.direction) {
-                case 'up':
-                  probeY += role.jumpSpeed;
-                  role.jumpSpeed -= role.gravity;
-                  if (role.jumpSpeed < 0) role.direction = 'down';
-
-                  // 检测角色是否越界
-                  // 检测角色是否碰到了墙(砖)
-                  var left = parseInt(proboX / TileSize);
-                  var top = parseInt(probeY / TileSize);
-                  if (probeY + role.sprite.height > MapTile.length * TileSize) collision = true;
-                  else if (
-                    MapTile[top + role.tileHeight][left - half] ||
-                    MapTile[top + role.tileHeight][left + half]
-                  ) {
-                    collision = true;
-                    role.jumpSpeed = 0;
-                    role.direction = 'down';
-                  }
-                  break;
-                case 'down':
-                  probeY -= role.jumpSpeed;
-                  role.jumpSpeed += role.gravity;
-                  if (role.jumpSpeed > TileSize) role.jumpSpeed = TileSize;
-
-                  var left = parseInt(proboX / TileSize);
-                  var top = parseInt(probeY / TileSize);
-                  if (probeY < 0) collision = true;
-                  else if (
-                    MapTile[top][left - half] ||
-                    MapTile[top][left + half]
-                  ) {
-                    collision = true;
-                    role.jump = false;
-                    role.direction = 'halt';
-                    role.tileTop = top.toFixed() - 0 + 1;
-                    role.sprite.y = role.tileTop * TileSize;
-                  }
-                  break;
                 case 'left':
                   if (!role.sprite.flippedX) role.sprite.flippedX = true;
                   else proboX -= role.step;
@@ -257,6 +218,52 @@ window.onload = function () {
                   break;
                 default:
                   break;
+              }
+
+              // 跳跃
+              if (role.jump) {
+                probeY += role.jumpSpeed;
+                role.jumpSpeed -= role.gravity;
+                var left = parseInt(proboX / TileSize);
+                var top = parseInt(probeY / TileSize);
+
+                if (role.jumpSpeed >= 0) {
+                  // 往上跳
+                  // 检测角色是否越界
+                  // 检测角色的头是否碰到了墙/天花板(砖)
+                  if (probeY + role.sprite.height > MapTile.length * TileSize) collision = true;
+                  else if (
+                    MapTile[top + role.tileHeight][left - half] ||
+                    MapTile[top + role.tileHeight][left + half]
+                  ) {
+                    collision = true;
+                    role.jumpSpeed = 0;
+                  }
+                } else {
+                  // 下落
+                  if (role.jumpSpeed > TileSize) {
+                    // 防止速度过快而导致的隔过一个格子
+                    role.jumpSpeed = TileSize;
+                  }
+                  // 检测角色是否越界
+                  // 检测角色的脚是否着地了
+                  if (probeY < 0) collision = true;
+                  else if (MapTile[top][left - half] || MapTile[top][left + half]) {
+                    collision = true;
+                    role.jump = false;
+                    role.tileTop = top.toFixed() - 0 + 1;
+                    role.sprite.y = role.tileTop * TileSize;
+                  }
+                }
+              } else {
+                // 判断脚下是否为空
+                var left = parseInt(proboX / TileSize);
+                var top = parseInt(probeY / TileSize);
+                if (!MapTile[top - 1][left - half] && !MapTile[top - 1][left + half]) {
+                  // 为空则开始下落
+                  role.jump = true;
+                  role.jumpSpeed = 0;
+                }
               }
 
               if (collision) continue;
