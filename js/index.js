@@ -149,8 +149,13 @@ window.onload = function () {
                       for (var i = 0; i < Roles.length; i += 1) {
                         var role = Roles[i];
                         if (role.camp !== 'player' || role.status !== 'ok' || role.jump) continue;
-                        role.jump = true;
+                        role.sprite.texture = Res.kodFighterOther;
+                        role.sprite.setTextureRect(cc.rect(77, 0, 52, 58));
                         role.jumpSpeed = role.jumpStart;
+                        setTimeout(function() {
+                          role.sprite.setTextureRect(cc.rect(154, 0, 51, 100));
+                          role.jump = true;
+                        }, 100);
                       }
                       break;
                     default:
@@ -223,9 +228,13 @@ window.onload = function () {
               // 跳跃
               if (role.jump) {
                 probeY += role.jumpSpeed;
-                role.jumpSpeed -= role.gravity;
                 var left = parseInt(proboX / TileSize);
                 var top = parseInt(probeY / TileSize);
+                role.jumpSpeed -= role.gravity;
+                role.sprite.texture = Res.kodFighterOther;
+                if (Math.abs(role.jumpSpeed) <= TileSize / 4)
+                  role.sprite.setTextureRect(cc.rect(231, 0, 54,73)); // 腾空帧
+                else role.sprite.setTextureRect(cc.rect(154, 0, 51, 100));
 
                 if (role.jumpSpeed >= 0) {
                   // 往上跳
@@ -253,6 +262,11 @@ window.onload = function () {
                     role.jump = false;
                     role.tileTop = top.toFixed() - 0 + 1;
                     role.sprite.y = role.tileTop * TileSize;
+                    role.sprite.texture = Res.kodFighterOther;
+                    role.sprite.setTextureRect(cc.rect(77, 0, 52, 58));
+                    setTimeout(function() {
+                      role.sprite.setTextureRect(cc.rect(0, 0, 45, 68));
+                    }, 200);
                   }
                 }
               } else {
@@ -352,6 +366,7 @@ function funcRoleAdd(roleType) {
 			break;
 
 		default:
+		  // npc
 			break;
 	}
 
