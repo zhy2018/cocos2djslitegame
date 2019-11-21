@@ -4,12 +4,7 @@ var B64 = '';
 var SceneData = [];
 var Action = 1; // 1: 绘制, 2: 擦除, 3: 选取, 0: 什么也不干
 var Working = false;
-var SelectBox = {
-	left: 0,
-	top: 0,
-	width: 1,
-	height: 1,
-};
+var SelectBox = { left: 0, top: 0, width: 1, height: 1 };
 var Shift = false; // 上档键是否处于按下状态
 var FileName = '';
 var DomGrid; // 会频繁用到
@@ -224,8 +219,8 @@ window.onload = function() {
 						var pos = -(left * TileSize + 1) + 'px ' + -(top * TileSize + 1) + 'px';
 						domTile.style.backgroundImage = 'url(' + B64 + ')';
 						domTile.style.backgroundPosition = pos;
-						if (val.length >= 3 && val[2])
-						  domTile.innerHTML = '<div>+</div>'; // 设置可通行性
+						if (val[2] === '1')
+						  domTile.innerHTML = '<div onmouseup="funcWorkEnd()">+</div>'; // 设置可通行性
 					}
 				}
 			};
@@ -328,10 +323,13 @@ function funcWorking(e) {
 					// 设置瓦片能否通行
 					if (SceneData[top][left]) {
 						// 只对有贴图的瓦片进行设置(忽略空地)
-						var width = parseInt(domWorkerBox.style.width) / TileSize;
-						var height = parseInt(domWorkerBox.style.height) / TileSize;
-						if (e.textContent) funcSetWalkable(left, top, width, height, true); // 设置为可通行
-						else funcSetWalkable(left, top, width, height, false); // 设置为不可通行
+						var width = domWorkerBox.clientWidth / TileSize;
+						var height = domWorkerBox.clientHeight / TileSize;
+						var val = SceneData[top][left].split(',');
+						if (val[2] === '1')
+						  funcSetWalkable(left, top, width, height, true); // 设置为可通行
+						else if (val[2] === '0')
+						  funcSetWalkable(left, top, width, height, false); // 设置为不可通行
 					}
 				}
 				break;
@@ -356,7 +354,7 @@ function funcDrawTile(left, top, width, height) {
 			pos += ' ' + -((row + SelectBox.top) * TileSize + 1) + 'px';
 			domTile.style.backgroundImage = 'url(' + B64 + ')';
 			domTile.style.backgroundPosition = pos;
-			SceneData[row + top][col + left] = col + SelectBox.left + ',' + (row + SelectBox.top);
+			SceneData[row + top][col + left] = col + SelectBox.left + ',' + (row + SelectBox.top) + ',1';
 		}
 	}
 }
@@ -401,15 +399,16 @@ function funcPasteTile(left, top) {
 			if (!domTile) continue;
 			if (value) {
 				// 有瓦片
-				SceneData[row + top][col + left] = value;
 				var val = value.split(',');
+				if (val.length === 2) val.push(1);
+        SceneData[row + top][col + left] = val.toString();
 				var left2 = val[0] - 0;
 				var top2 = val[1] - 0;
 				var pos = -(left2 * TileSize + 1) + 'px ' + -(top2 * TileSize + 1) + 'px';
 				domTile.style.backgroundImage = 'url(' + B64 + ')';
 				domTile.style.backgroundPosition = pos;
-				if (val.length >= 3 && val[2])
-				  domTile.innerHTML = '<div>+</div>'; // 设置可通行性
+				if (val[2])
+				  domTile.innerHTML = '<div onmouseup="funcWorkEnd()">+</div>'; // 设置可通行性
 			} else {
 				// 空位置
 				domTile.style.backgroundImage = 'none';
@@ -432,16 +431,15 @@ function funcSetWalkable(left, top, width, height, walkable) {
 			if (!value) continue;
 
 			var val = value.split(',');
+      console.log(left, top, width, height, walkable);
 			if (walkable) {
 				// 设置为可通行
 				domTile.textContent = '';
-				if (val.length === 3) val.splice(2, 1);
-				else if (val.length === 4) val[2] = 0;
+				val[2] = 0;
 			} else {
 				// 设置为不可通行
-				domTile.innerHTML = '<div>+</div>';
-				if (val.length === 2) val.push(1);
-				else if (val.length === 4) val[2] = 1;
+				domTile.innerHTML = '<div onmouseup="funcWorkEnd()">+</div>';
+				val[2] = 1;
 			}
 			SceneData[row + top][col + left] = val.toString();
 		}

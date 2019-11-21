@@ -86,12 +86,12 @@ window.onload = function () {
               for (var row = 0; row < MapTile.length; row += 1) {
                 for (var col = 0; col < MapTile[row].length; col += 1) {
                   var item = MapTile[row][col];
-                  if (!item) continue;
+                  if (item === 0) continue;
 
-                  var left = item.split(',')[0];
-                  var top = item.split(',')[1];
+                  MapTile[row][col] = JSON.parse('[' + item + ']');
+                  item = MapTile[row][col];
                   var sprite = cc.Sprite.create(
-                    data[0], cc.rect(left * TileSize, top * TileSize, TileSize, TileSize)
+                    data[0], cc.rect(item[0] * TileSize, item[1] * TileSize, TileSize, TileSize)
                   );
                   sprite.attr({
                     x: col * TileSize,
@@ -203,10 +203,11 @@ window.onload = function () {
 
                   var left = parseInt(proboX / TileSize);
                   var top = parseInt(probeY / TileSize);
+                  cc.log(MapTile[top][left - half], MapTile[top + role.tileHeight][left - half]);
                   if (proboX - role.sprite.width / 2 < 0) collision = true;
                   else if (
-                    MapTile[top][left - half] ||
-                    MapTile[top + role.tileHeight][left - half]
+                    (MapTile[top][left - half] && MapTile[top][left - half][2]) ||
+                    (MapTile[top + role.tileHeight][left - half] && MapTile[top + role.tileHeight][left - half][2])
                   ) collision = true;
                   break;
                 case 'right':
@@ -215,10 +216,11 @@ window.onload = function () {
 
                   var left = parseInt(proboX / TileSize);
                   var top = parseInt(probeY / TileSize);
+                  cc.log(MapTile[top][left + half], MapTile[top + role.tileHeight][left + half]);
                   if (proboX + role.sprite.width / 2 > MapTile[0].length * TileSize) collision = true;
                   else if (
-                    MapTile[top][left + half] ||
-                    MapTile[top + role.tileHeight][left + half]
+                    (MapTile[top][left + half] && MapTile[top][left + half][2]) ||
+                    (MapTile[top + role.tileHeight][left + half] && MapTile[top + role.tileHeight][left + half][2])
                   ) collision = true;
                   break;
                 default:
@@ -242,8 +244,8 @@ window.onload = function () {
                   // 检测角色的头是否碰到了墙/天花板(砖)
                   if (probeY + role.sprite.height > MapTile.length * TileSize) collision = true;
                   else if (
-                    MapTile[top + role.tileHeight][left - half] ||
-                    MapTile[top + role.tileHeight][left + half]
+                    (MapTile[top + role.tileHeight][left - half] && MapTile[top + role.tileHeight][left - half][2]) ||
+                    (MapTile[top + role.tileHeight][left + half] && MapTile[top + role.tileHeight][left + half][2])
                   ) {
                     collision = true;
                     role.jumpSpeed = 0;
@@ -257,7 +259,10 @@ window.onload = function () {
                   // 检测角色是否越界
                   // 检测角色的脚是否着地了
                   if (probeY < 0) collision = true;
-                  else if (MapTile[top][left - half] || MapTile[top][left + half]) {
+                  else if (
+                    (MapTile[top][left - half] && MapTile[top][left - half][2]) ||
+                    (MapTile[top][left + half] && MapTile[top][left + half][2])
+                  ) {
                     collision = true;
                     role.jump = false;
                     role.tileTop = top.toFixed() - 0 + 1;
@@ -273,7 +278,10 @@ window.onload = function () {
                 // 判断脚下是否为空
                 var left = parseInt(proboX / TileSize);
                 var top = parseInt(probeY / TileSize);
-                if (!MapTile[top - 1][left - half] && !MapTile[top - 1][left + half]) {
+                if (
+                  (MapTile[top - 1][left - half] === 0 || MapTile[top - 1][left - half][2] === 0) &&
+                  (MapTile[top - 1][left + half] === 0 || MapTile[top - 1][left + half][2] === 0)
+                ) {
                   // 为空则开始下落
                   role.jump = true;
                   role.jumpSpeed = 0;
