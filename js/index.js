@@ -45,7 +45,9 @@ var Id = 1; // 主索引, 唯一标识
 
 // 执行入口
 window.onload = function () {
+  var dom = document.getElementById('gameCanvas');
   cc.game.onStart = function () {
+    if (dom) dom.focus();
 		WinSize = cc.director.getWinSize();
     cc.view.adjustViewPort(true);
     cc.view.resizeWithBrowserSize(true);
@@ -152,14 +154,25 @@ window.onload = function () {
                       for (var i = 0; i < Roles.length; i += 1) {
                         var role = Roles[i];
                         if (role.camp !== 'player' || role.status !== 'ok' || role.jump) continue;
+
+                        if (role.action) {
+                          role.sprite.stopAction(role.action);
+                          role.action = 0;
+                        }
+                        role.status = 'busy';
                         role.sprite.texture = Res.kodFighterOther;
                         role.sprite.setTextureRect(cc.rect(77, 0, 52, 58));
                         role.jumpSpeed = role.jumpStart;
                         setTimeout(function() {
                           role.sprite.setTextureRect(cc.rect(154, 0, 51, 100));
                           role.jump = true;
+                          role.status = 'ok';
                         }, 100);
                       }
+                      break;
+                    case 116:
+                      // F5键刷新
+                      location.reload();
                       break;
                     default:
                       break;
@@ -268,14 +281,27 @@ window.onload = function () {
                   if (probeY < 0) collision = true;
                   else if (MapTile[top][left - half][2] || MapTile[top][left + half][2]) {
                     collision = true;
+                    if (role.action) {
+                      role.sprite.stopAction(role.action);
+                      role.action = 0;
+                    }
                     role.jump = false;
+                    role.status = 'busy';
                     role.tileTop = top.toFixed() - 0 + 1;
                     role.sprite.y = role.tileTop * TileSize;
                     role.sprite.texture = Res.kodFighterOther;
                     role.sprite.setTextureRect(cc.rect(77, 0, 52, 58));
                     setTimeout(function() {
                       role.sprite.setTextureRect(cc.rect(0, 0, 45, 68));
-                    }, 200);
+                      role.status = 'ok';
+                      if (role.direction !== 'halt') {
+                        if (!role.action) {
+                          role.action = role.sprite.runAction(
+                            cc.RepeatForever.create(cc.Sequence.create(role.animate))
+                          );
+                        }
+                      }
+                    }, 100);
                   }
                 }
               } else {
