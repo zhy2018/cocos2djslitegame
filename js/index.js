@@ -211,47 +211,14 @@ window.onload = function () {
               var proboX = role.sprite.x;
               var probeY = role.sprite.y;
               var half = parseInt(role.tileWidth / 2);
-
-              switch (role.direction) {
-                case 'left':
-                  if (!role.sprite.flippedX) role.sprite.flippedX = true;
-                  else proboX -= role.step;
-
-                  var left = parseInt(proboX / TileSize);
-                  var top = parseInt(probeY / TileSize);
-                  cc.log(MapTile[top][left - half], MapTile[top + role.tileHeight][left - half]);
-                  if (proboX - role.sprite.width / 2 < 0)
-                    collision = true;
-                  else if (
-                    MapTile[top][left - half][2] ||
-                    MapTile[top + role.tileHeight][left - half][2]
-                  )
-                    collision = true;
-                  break;
-                case 'right':
-                  if (role.sprite.flippedX) role.sprite.flippedX = false;
-                  else proboX += role.step;
-
-                  var left = parseInt(proboX / TileSize);
-                  var top = parseInt(probeY / TileSize);
-                  cc.log(MapTile[top][left + half], MapTile[top + role.tileHeight][left + half]);
-                  if (proboX + role.sprite.width / 2 > MapTile[0].length * TileSize)
-                    collision = true;
-                  else if (
-                    MapTile[top][left + half][2] ||
-                    MapTile[top + role.tileHeight][left + half][2]
-                  )
-                    collision = true;
-                  break;
-                default:
-                  break;
-              }
+              var left = 0;
+              var top = 0;
 
               // 跳跃
               if (role.jump) {
                 probeY += role.jumpSpeed;
-                var left = parseInt(proboX / TileSize);
-                var top = parseInt(probeY / TileSize);
+                left = parseInt(proboX / TileSize);
+                top = parseInt(probeY / TileSize);
                 role.jumpSpeed -= role.gravity;
                 role.sprite.texture = Res.kodFighterOther;
                 if (Math.abs(role.jumpSpeed) <= TileSize / 4)
@@ -259,7 +226,7 @@ window.onload = function () {
                 else role.sprite.setTextureRect(cc.rect(154, 0, 51, 100));
 
                 if (role.jumpSpeed >= 0) {
-                  // 往上跳
+                  // 跳起
                   // 检测角色是否越界
                   // 检测角色的头是否碰到了墙/天花板(砖)
                   if (probeY + role.sprite.height > MapTile.length * TileSize) collision = true;
@@ -306,9 +273,12 @@ window.onload = function () {
                 }
               } else {
                 // 判断脚下是否为空
-                var left = parseInt(proboX / TileSize);
-                var top = parseInt(probeY / TileSize);
-                if (MapTile[top - 1][left - half][2] === 0 && MapTile[top - 1][left + half][2] === 0) {
+                left = parseInt(proboX / TileSize);
+                top = parseInt(probeY / TileSize);
+                if (
+                  MapTile[top - 1][left - half][2] === 0 &&
+                  MapTile[top - 1][left + half][2] === 0
+                ) {
                   // 为空则开始下落
                   role.jump = true;
                   role.jumpSpeed = 0;
@@ -316,9 +286,45 @@ window.onload = function () {
               }
 
               if (collision) continue;
-
-              role.sprite.x = proboX;
               role.sprite.y = probeY;
+
+              switch (role.direction) {
+                case 'left':
+                  if (!role.sprite.flippedX) role.sprite.flippedX = true;
+                  else proboX -= role.step;
+
+                  left = parseInt(proboX / TileSize);
+                  top = parseInt(probeY / TileSize);
+                  // cc.log(MapTile[top][left - half], MapTile[top + role.tileHeight][left - half]);
+                  if (proboX - role.sprite.width / 2 < 0)
+                    collision = true;
+                  else if (
+                    MapTile[top][left - half][2] ||
+                    MapTile[top + role.tileHeight][left - half][2]
+                  )
+                    collision = true;
+                  break;
+                case 'right':
+                  if (role.sprite.flippedX) role.sprite.flippedX = false;
+                  else proboX += role.step;
+
+                  left = parseInt(proboX / TileSize);
+                  top = parseInt(probeY / TileSize);
+                  // cc.log(MapTile[top][left + half], MapTile[top + role.tileHeight][left + half]);
+                  if (proboX + role.sprite.width / 2 > MapTile[0].length * TileSize)
+                    collision = true;
+                  else if (
+                    MapTile[top][left + half][2] ||
+                    MapTile[top + role.tileHeight][left + half][2]
+                  )
+                    collision = true;
+                  break;
+                default:
+                  break;
+              }
+
+              if (collision) continue;
+              role.sprite.x = proboX;
 
               // 更新角色在地图上所处的位置
               left = role.sprite.x / TileSize;
@@ -326,9 +332,9 @@ window.onload = function () {
               role.tileLeft = left.toFixed() - 0;
               role.tileTop = top.toFixed() - 0;
 
-              for (var i = 0; i < role.tileHeight; i += 1) {
-                for (var j = 0; j < role.tileWidth; j += 1) {
-                  MapRole[role.tileTop + i][role.tileLeft + j] = role.id;
+              for (var j = 0; j < role.tileHeight; j += 1) {
+                for (var k = 0; k < role.tileWidth; k += 1) {
+                  MapRole[role.tileTop + j][role.tileLeft + k] = role.id;
                 }
               }
             }
