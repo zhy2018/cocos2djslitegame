@@ -1,5 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
-<svg version='1.1' width='1220' height='640' viewBox='0 0 1220 640' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+<svg width='1280' height='768' style='background-color: white;'>
     <g>
         <line x1='30' y1='90' x2='90' y2='90' stroke='darkorange' stroke-width='5'></line>
         <line x1='70' y1='90' x2='70' y2='120' stroke='darkorange' stroke-width='3'></line>
@@ -41,12 +40,12 @@
         <line x1='130' y1='90' x2='130' y2='410' stroke='darkorange' stroke-width='2'></line>
         <line x1='110' y1='90' x2='170' y2='90' stroke='darkorange' stroke-width='5'></line>
         <text x='50' y='440' fill='dimgray' font-size='16'>主进线</text>
-        <text x='50' y='470' fill='#eacf02' font-size='14'>A相电压：235.1 伏</text>
-        <text x='50' y='500' fill='limegreen' font-size='14'>B相电压：235.4 伏</text>
-        <text x='50' y='530' fill='red' font-size='14'>C相电压：234.8 伏</text>
-        <text x='50' y='560' fill='#eacf02' font-size='14'>A相电流：0 安</text>
-        <text x='50' y='590' fill='limegreen' font-size='14'>B相电流：0 安</text>
-        <text x='50' y='620' fill='red' font-size='14'>C相电流：0 安</text>
+        <text x='50' y='470' fill='#eacf02' font-size='14'>A相电压：失联</text>
+        <text x='50' y='500' fill='limegreen' font-size='14'>B相电压：失联</text>
+        <text x='50' y='530' fill='red' font-size='14'>C相电压：失联</text>
+        <text x='50' y='560' fill='#eacf02' font-size='14'>A相电流：失联</text>
+        <text x='50' y='590' fill='limegreen' font-size='14'>B相电流：失联</text>
+        <text x='50' y='620' fill='red' font-size='14'>C相电流：失联</text>
     </g>
     <g>
         <line x1='500' y1='200' x2='530' y2='200' stroke='darkorange' stroke-width='2'></line>
@@ -98,9 +97,9 @@
         <polygon type='Triangle' x='680' y='300' rotate='270' size='5' fill='darkorange' stroke='darkorange'
                  transform='rotate(270 680,300)' points='675,300 685,300 680,306' stroke-width='1'></polygon>
         <text x='520' y='330' fill='dimgray' font-size='14'>出线2</text>
-        <text x='690' y='285' fill='#eacf02' font-size='14'>0.00</text>
-        <text x='690' y='305' fill='limegreen' font-size='14'>0.00</text>
-        <text x='690' y='325' fill='red' font-size='14'>0.00</text>
+        <text x='690' y='285' fill='#eacf02' font-size='14'>失联</text>
+        <text x='690' y='305' fill='limegreen' font-size='14'>失联</text>
+        <text x='690' y='325' fill='red' font-size='14'>失联</text>
         <g>
             <line x1='530' y1='300' x2='535' y2='305' stroke='darkorange' stroke-width='2'></line>
             <line x1='530' y1='300' x2='535' y2='295' stroke='darkorange' stroke-width='2'></line>
@@ -342,7 +341,7 @@
             <rect x='287' y='350' width='6' height='20' fill='white' rotate='120'
                   transform='rotate(120 288,353)'></rect>
         </g>
-        <text x='240' y='420' fill='#eacf02' font-size='14'>电压：235.1 伏</text>
+        <text x='240' y='420' fill='#eacf02' font-size='14'>电压：236.5 伏</text>
         <text x='240' y='440' fill='#eacf02' font-size='14'>电流：0 安</text>
         <text x='240' y='460' fill='#eacf02' font-size='14'>功率因数：100%</text>
         <text x='240' y='480' fill='#eacf02' font-size='14'>输出状态：[00000000 00000000]</text>
