@@ -28,8 +28,7 @@ window.onload = function() {
 			var sceneMain = cc.Scene.extend({
 				onEnter: function() {
 					this._super();
-          this.scheduleUpdate();
-          var winSize = cc.director.getWinSize();
+					var winSize = cc.director.getWinSize();
 					var w = winSize.width;
 					var h = winSize.height;
 					control.winWidth = w;
@@ -103,7 +102,6 @@ window.onload = function() {
 					this._super();
 					cc.eventManager.removeListener(cc.EventListener.TOUCH_ONE_BY_ONE);
 				},
-				// update: funcRun,
 			});
 			cc.director.runScene(new sceneMain());
 		}, this);
@@ -136,8 +134,8 @@ function funcInit() {
 			if (!maps[i][j][1]) continue;
 
 			var num = maps[i][j][0];
-			var x = Math.round((config.tileSize * j + config.tileSize / 2) * control.zoom);
-			var y = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
+			var x = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
+			var y = Math.round((config.tileSize * j + config.tileSize / 2) * control.zoom);
 
 			var bg = cc.Sprite.create(config.imgPath + 'tileBg.gif');
 			bg.attr({
@@ -168,11 +166,11 @@ function funcInit() {
 // 格子的按下事件
 function funcPress(role) {
 	var role0 = control.firstRole;
-	var row = Math.round(role.y / control.zoom / config.tileSize);
-	var col = Math.round(role.x / control.zoom / config.tileSize);
-	var row0 = Math.round(role0.y / control.zoom / config.tileSize);
-	var col0 = Math.round(role0.x / control.zoom / config.tileSize);
-	cc.log(row, col, role.tag);
+	var row = Math.round(role.x / control.zoom / config.tileSize);
+	var col = Math.round(role.y / control.zoom / config.tileSize);
+	var row0 = Math.round(role0.x / control.zoom / config.tileSize);
+	var col0 = Math.round(role0.y / control.zoom / config.tileSize);
+	// cc.log(row, col, role.tag);
 
 	if (!role0) {
 		control.firstRole = role;
@@ -266,7 +264,7 @@ function funcSwitch(role, cb) {
 	role0.runAction(sequ);
 }
 
-// 检测是否存在连续, 并予以标记
+// 检查是否存在连续, 并予以标记
 function funcCheck() {
 	var result = false;
 	var maps = control.maps;
@@ -322,8 +320,8 @@ function funcRemove() {
 	var time = config.time;
 	var distance = 0, distanceMax = 0;
 	for (var i = 0; i < maps.length; i += 1) {
-		var y = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
-		var x = Math.round(config.tileSize / 2 * control.zoom);
+		var x = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
+		var y = Math.round(config.tileSize / 2 * control.zoom);
 		distance = 0;
 
 		for (var j = 0; j < maps[i].length; j += 1) {
@@ -331,7 +329,7 @@ function funcRemove() {
 				distance += 1;
 				distanceMax = distance;
 			} else if (distance) {
-				x = Math.round((config.tileSize * (j - distance) + config.tileSize / 2) * control.zoom);
+				y = Math.round((config.tileSize * (j - distance) + config.tileSize / 2) * control.zoom);
 				var role = roles[i + '_' + j];
 				if (!role) continue;
 
@@ -356,8 +354,10 @@ function funcRemove() {
 		}
 	}
 
-	// 移除后要再次检查是否存在连续的格子
+	// 移除后检查是否存在连续的格子
+	control.acceptTouch = false; // 暂时忽略触控的响应, 防止出现bug
 	layer.scheduleOnce(function() {
+		control.acceptTouch = true; // 恢复触控的响应
 		var result = funcCheck();
 		if (result) funcRemove();
 		else funcFill();
@@ -369,14 +369,17 @@ function funcFill() {
 	var maps = control.maps;
 	var roles = control.roles;
 	var layer = control.layerScene.children[0];
+	var time = config.time, tileSize = config.tileSize;
+	var mapSize = control.mapSize, zoom = control.zoom;
+	var distance = 0, distanceMax = 0;
 
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = maps[i].length; j < control.mapSize; j += 1) {
 			var num = funcRand(6);
 			maps[i].push([num, 1]);
 
-			var x = Math.round((config.tileSize * j + config.tileSize / 2) * control.zoom);
-			var y = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
+			var x = Math.round((tileSize * i + tileSize / 2) * zoom);
+			var y = Math.round((tileSize * (mapSize - j + mapSize - 1) + tileSize / 2) * zoom);
 
 			var role = cc.Sprite.create(
 				config.imgPath + 'roles.png',
@@ -391,6 +394,11 @@ function funcFill() {
 			layer.children[1].addChild(role);
 			control.roles[i + '_' + j] = role;
 			cc.eventManager.addListener(control.touchListener.clone(), role);
+			role.runAction(cc.MoveTo.create(time * distance, cc.p(x, y)));
 		}
 	}
+
+	// 补满后检查是否存在连续的格子
+	var result = funcCheck();
+	if (result) funcRemove();
 }
