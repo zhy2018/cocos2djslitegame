@@ -16,21 +16,33 @@ var control = {
 	acceptTouch: true, // 是否响应触控事件
 	touchListener: {}, // 触控事件
 };
+var res = {
+	roles: config.imgPath + 'roles.png',
+	tileBg: config.imgPath + 'tileBg.gif',
+	tileBorder: config.imgPath + 'tileBorder.gif',
+};
 
 // 执行入口
 window.onload = function() {
 	cc.game.onStart = function() {
 		cc.view.adjustViewPort(true);
-		cc.view.setDesignResolutionSize(720, 1280, cc.ResolutionPolicy.SHOW_ALL);
 		cc.view.resizeWithBrowserSize(true);
+		var w = window.innerWidth;
+		var h = window.innerHeight;
+		cc.view.setDesignResolutionSize(w < h ? w : h, h > w ? h : w, cc.ResolutionPolicy.SHOW_ALL);
 
-		cc.LoaderScene.preload([], function() {
+		var resData = [];
+		for (var i in res) {
+			resData.push(res[i]);
+		}
+
+		cc.LoaderScene.preload(resData, function() {
 			var sceneMain = cc.Scene.extend({
 				onEnter: function() {
 					this._super();
 					var winSize = cc.director.getWinSize();
-					var w = winSize.width;
-					var h = winSize.height;
+					w = winSize.width;
+					h = winSize.height;
 					control.winWidth = w;
 					control.winHeight = h;
 
@@ -91,7 +103,7 @@ window.onload = function() {
 					funcInit();
 
 					// 格子的选择框
-					var tileBorder = cc.Sprite.create(config.imgPath + 'tileBorder.gif');
+					var tileBorder = cc.Sprite.create(res.tileBorder);
 					tileBorder.attr({
 						scale: control.zoom,
 						visible: false
@@ -137,7 +149,7 @@ function funcInit() {
 			var x = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
 			var y = Math.round((config.tileSize * j + config.tileSize / 2) * control.zoom);
 
-			var bg = cc.Sprite.create(config.imgPath + 'tileBg.gif');
+			var bg = cc.Sprite.create(res.tileBg);
 			bg.attr({
 				x: x,
 				y: y,
@@ -146,7 +158,7 @@ function funcInit() {
 			layer.children[0].addChild(bg);
 
 			var role = cc.Sprite.create(
-				config.imgPath + 'roles.png',
+				res.roles,
 				cc.rect(0, num * config.roleSize, config.roleSize, config.roleSize)
 			);
 			role.attr({
@@ -166,10 +178,10 @@ function funcInit() {
 // 格子的按下事件
 function funcPress(role) {
 	var role0 = control.firstRole;
-	var row = Math.round(role.x / control.zoom / config.tileSize);
-	var col = Math.round(role.y / control.zoom / config.tileSize);
-	var row0 = Math.round(role0.x / control.zoom / config.tileSize);
-	var col0 = Math.round(role0.y / control.zoom / config.tileSize);
+	var row = parseInt(role.x / control.zoom / config.tileSize);
+	var col = parseInt(role.y / control.zoom / config.tileSize);
+	var row0 = parseInt(role0.x / control.zoom / config.tileSize);
+	var col0 = parseInt(role0.y / control.zoom / config.tileSize);
 	// cc.log(row, col, role.tag);
 
 	if (!role0) {
@@ -304,24 +316,53 @@ function funcRemove() {
 	var maps = control.maps;
 	var roles = control.roles;
 	var layer = control.layerScene.children[0];
+	var time = config.time, roleSize = config.roleSize;
 
-	// 移除roles
+	// 移除的动画
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = 0; j < maps[i].length; j += 1) {
-			if (maps[i][j][1] === -1) {
+			if (maps[i][j][1] !== -1) continue;
+
+			var role = roles[i + '_' + j];
+			role.setTextureRect(cc.rect(roleSize * 2, roleSize * maps[i][j][0], roleSize, roleSize));
+			role.zIndex = 1;
+			var scaleTo = cc.ScaleTo.create(time, control.zoom * 1.5);
+			var fadeOut = cc.FadeOut.create(time);
+			var spawn = cc.spawn(scaleTo, fadeOut);
+			role.runAction(spawn);
+		}
+	}
+
+	control.acceptTouch = false; // 暂时忽略触控的响应, 防止出现bug
+	layer.scheduleOnce(function() {
+		control.acceptTouch = true; // 恢复触控的响应
+
+		// 移除实体
+		for (var i = 0; i < maps.length; i += 1) {
+			for (var j = 0; j < maps[i].length; j += 1) {
+				if (maps[i][j][1] !== -1) continue;
+
 				var role = roles[i + '_' + j];
 				layer.children[1].removeChild(role);
 				delete roles[i + '_' + j];
 			}
 		}
-	}
 
-	// 移除后要将浮空的角色落地
-	var time = config.time;
+		funcFall();
+	}, time);
+}
+
+// 移除后要将浮空的角色落地
+function funcFall() {
+	var maps = control.maps, zoom = control.zoom;
+	var roles = control.roles;
+	var layer = control.layerScene.children[0];
+	var time = config.time, tileSize = config.tileSize;
 	var distance = 0, distanceMax = 0;
+
 	for (var i = 0; i < maps.length; i += 1) {
-		var x = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
-		var y = Math.round(config.tileSize / 2 * control.zoom);
+		var x = Math.round((tileSize * i + tileSize / 2) * zoom);
+		var y = Math.round(tileSize / 2 * zoom);
 		distance = 0;
 
 		for (var j = 0; j < maps[i].length; j += 1) {
@@ -329,7 +370,7 @@ function funcRemove() {
 				distance += 1;
 				distanceMax = distance;
 			} else if (distance) {
-				y = Math.round((config.tileSize * (j - distance) + config.tileSize / 2) * control.zoom);
+				y = Math.round((tileSize * (j - distance) + tileSize / 2) * zoom);
 				var role = roles[i + '_' + j];
 				if (!role) continue;
 
@@ -374,31 +415,38 @@ function funcFill() {
 	var distance = 0, distanceMax = 0;
 
 	for (var i = 0; i < maps.length; i += 1) {
-		for (var j = maps[i].length; j < control.mapSize; j += 1) {
+		distance = mapSize - maps[i].length;
+		if (distance > distanceMax) distanceMax = distance;
+		for (var j = maps[i].length, k = 0; j < mapSize; j += 1, k += 1) {
 			var num = funcRand(6);
 			maps[i].push([num, 1]);
 
 			var x = Math.round((tileSize * i + tileSize / 2) * zoom);
-			var y = Math.round((tileSize * (mapSize - j + mapSize - 1) + tileSize / 2) * zoom);
+			var y0 = Math.round((tileSize * (mapSize + k) + tileSize / 2) * zoom);
+			var y1 = Math.round((tileSize * j + tileSize / 2) * zoom);
 
 			var role = cc.Sprite.create(
-				config.imgPath + 'roles.png',
+				res.roles,
 				cc.rect(0, num * config.roleSize, config.roleSize, config.roleSize)
 			);
 			role.attr({
 				x: x,
-				y: y,
-				scale: control.zoom,
+				y: y0,
+				scale: zoom,
 				tag: num,
 			});
 			layer.children[1].addChild(role);
 			control.roles[i + '_' + j] = role;
 			cc.eventManager.addListener(control.touchListener.clone(), role);
-			role.runAction(cc.MoveTo.create(time * distance, cc.p(x, y)));
+			role.runAction(cc.MoveTo.create(time * distance, cc.p(x, y1)));
 		}
 	}
 
 	// 补满后检查是否存在连续的格子
-	var result = funcCheck();
-	if (result) funcRemove();
+	control.acceptTouch = false; // 暂时忽略触控的响应, 防止出现bug
+	layer.scheduleOnce(function() {
+		control.acceptTouch = true; // 恢复触控的响应
+		var result = funcCheck();
+		if (result) funcRemove();
+	}, time * distanceMax);
 }
