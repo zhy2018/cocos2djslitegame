@@ -1,6 +1,7 @@
 var config = {
 	tileSize: 29, // 格子大小
 	roleSize: 24, // 格子里的角色大小
+	mapSizeLimit: 9, // 地图大小的上限
 	time: 0.2, // 动画时长(角色下落位移)
 	imgPath: 'res/img/',
 };
@@ -8,11 +9,12 @@ var control = {
 	winWidth: 0,
 	winHeight: 0,
 	zoom: 1, // 格子的缩放倍数
-	mapSize: 9, // 地图大小(正方形, 每行或每列里的格子个数)
+	mapSize: 4, // 地图大小(正方形, 每行或每列里的格子个数)
 	maps: [],
 	layerScene: {},
 	roles: {},
 	firstRole: false, // 第一次点击的格子
+	currentRole: false, // 第二次点击的格子(当前的)
 	acceptTouch: true, // 是否响应触控事件
 	touchListener: {}, // 触控事件
 };
@@ -54,7 +56,8 @@ window.onload = function() {
 					this.addChild(control.layerScene);
 
 					// 舞台层
-					var layerStage = cc.LayerColor.create(funcColor('#dddddd'), w, w);
+					color = (hour >= 7 && hour <= 17) ? '#dddddd' : '#444444';
+					var layerStage = cc.LayerColor.create(funcColor(color), w, w);
 					layerStage.attr({ y: h / 2 - w / 2 });
 					control.layerScene.addChild(layerStage);
 
@@ -75,7 +78,7 @@ window.onload = function() {
 					layerStage.addChild(layerStageRole);
 
 					// 计算格子的缩放倍数
-					control.zoom = w / control.mapSize / config.tileSize;
+					control.zoom = w / config.mapSizeLimit / config.tileSize;
 					control.zoom = control.zoom.toFixed(2) - 0;
 
 					// 格子的按下事件
@@ -95,7 +98,8 @@ window.onload = function() {
 								visible: true,
 							});
 
-							funcPress(target);
+							control.currentRole = target;
+							funcPress();
 							return true;
 						},
 					});
@@ -138,6 +142,13 @@ function funcInit() {
 			maps[i].push([n, 1]);
 		}
 	}
+	// 测试数据
+	maps = [
+		[[1, 1], [5, 1], [1, 1], [2, 1]],
+		[[3, 1], [0, 1], [5, 1], [4, 1]],
+		[[0, 1], [5, 1], [5, 1], [1, 1]],
+		[[2, 1], [3, 1], [4, 1], [0, 1]],
+	];
 
 	var layer = control.layerScene.children[0];
 	control.roles = {};
@@ -176,13 +187,14 @@ function funcInit() {
 }
 
 // 格子的按下事件
-function funcPress(role) {
+function funcPress() {
+	var role = control.currentRole;
 	var role0 = control.firstRole;
 	var row = parseInt(role.x / control.zoom / config.tileSize);
 	var col = parseInt(role.y / control.zoom / config.tileSize);
 	var row0 = parseInt(role0.x / control.zoom / config.tileSize);
 	var col0 = parseInt(role0.y / control.zoom / config.tileSize);
-	// cc.log(row, col, role.tag);
+	cc.log(row, col, role.tag);
 
 	if (!role0) {
 		control.firstRole = role;
@@ -280,12 +292,21 @@ function funcSwitch(role, cb) {
 function funcCheck() {
 	var result = false;
 	var maps = control.maps;
+	var roleSize = config.roleSize;
+	var role = control.currentRole;
+	var row = parseInt(role.x / control.zoom / config.tileSize);
+	var col = parseInt(role.y / control.zoom / config.tileSize);
+
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = 0; j < maps[i].length; j += 1) {
 			var cell = maps[i][j];
 			if (cell[1] === -1) continue;
 
 			var tag = cell[0];
+
+			// 格子类型: 1正常, －1移除, 2横向贯穿, 3纵向贯穿, 4九格炸弹, 5吸走
+
+			// 横向检查
 			if (
 				i < maps.length - 2 && maps[i + 1][j] && maps[i + 2][j] &&
 				tag === maps[i + 1][j][0] && tag === maps[i + 2][j][0]
@@ -295,7 +316,19 @@ function funcCheck() {
 				cell[1] = -1;
 				maps[i + 1][j][1] = -1;
 				maps[i + 2][j][1] = -1;
+
+				// 扩展检查, 4个在一条横线上
+				if (i < maps.length - 3 && maps[i + 3][j] && tag === maps[i + 3][j][0]) {
+					maps[i + 3][j][1] = -1;
+
+					// 5个在一条横线上
+					if (i < maps.length - 4 && maps[i + 4][j] && tag === maps[i + 4][j][0]) {
+						maps[i + 4][j][1] = -1;
+					}
+				}
 			}
+
+			// 纵向检查
 			if (
 				j < maps[i].length - 2 && maps[i][j + 1] && maps[i][j + 2] &&
 				tag === maps[i][j + 1][0] && tag === maps[i][j + 2][0]
@@ -304,6 +337,31 @@ function funcCheck() {
 				cell[1] = -1;
 				maps[i][j + 1][1] = -1;
 				maps[i][j + 2][1] = -1;
+
+				if (j < maps[i].length - 3 && maps[i][j + 3] && tag === maps[i][j + 3][0]) {
+					maps[i][j + 3][1] = -1;
+
+					if (j < maps[i].length - 4 && maps[i][j + 4] && tag === maps[i][j + 4][0]) {
+						maps[i][j + 4][1] = -1;
+					}
+				}
+			}
+
+			// 田字检查, 4个相同的在一起呈田字
+			if (
+				(i < maps.length - 1 && maps[i + 1][j] && tag === maps[i + 1][j][0]) &&
+				(j < maps[i].length - 1 && maps[i][j + 1] && maps[i + 1][j + 1]) &&
+				(tag === maps[i][j + 1][0] && tag === maps[i + 1][j + 1][0] && !result)
+			) {
+				result = true;
+				cell[1] = -1;
+				maps[i + 1][j][1] = -1;
+				maps[i][j + 1][1] = -1;
+				maps[i + 1][j + 1][1] = -1;
+				maps[row][col][1] = 4;
+				cc.log(row, col);
+				role.zIndex = 1;
+				role.setTextureRect(cc.rect(roleSize, roleSize * tag, roleSize, roleSize));
 			}
 		}
 	}
@@ -324,8 +382,8 @@ function funcRemove() {
 			if (maps[i][j][1] !== -1) continue;
 
 			var role = roles[i + '_' + j];
-			role.setTextureRect(cc.rect(roleSize * 2, roleSize * maps[i][j][0], roleSize, roleSize));
 			role.zIndex = 1;
+			role.setTextureRect(cc.rect(roleSize * 2, roleSize * maps[i][j][0], roleSize, roleSize));
 			var scaleTo = cc.ScaleTo.create(time, control.zoom * 1.5);
 			var fadeOut = cc.FadeOut.create(time);
 			var spawn = cc.spawn(scaleTo, fadeOut);
