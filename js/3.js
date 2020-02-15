@@ -3,25 +3,30 @@ var config = {
 	roleSize: 24, // 格子里的角色大小
 	mapSizeLimit: 9, // 地图大小的上限
 	time: 0.2, // 动画时长(角色下落位移)
-	imgPath: 'res/img/',
+	imgPath: 'assets/resources/img/',
+	jsonPath: 'assets/resources/json/',
 };
 var control = {
 	winWidth: 0,
 	winHeight: 0,
 	zoom: 1, // 格子的缩放倍数
-	mapSize: 4, // 地图大小(正方形, 每行或每列里的格子个数)
+	mapSize: 9, // 地图大小(正方形, 每行或每列里的格子个数)
 	maps: [],
 	layerScene: {},
 	roles: {},
-	firstRole: false, // 第一次点击的格子
+	roleNum: 4,
+	firstRole: false, // 第一次点击的格子(首次, 之前的)
 	currentRole: false, // 第二次点击的格子(当前的)
 	acceptTouch: true, // 是否响应触控事件
 	touchListener: {}, // 触控事件
+	stageNum: 1,
+	stageData: {},
 };
 var res = {
 	roles: config.imgPath + 'roles.png',
 	tileBg: config.imgPath + 'tileBg.gif',
 	tileBorder: config.imgPath + 'tileBorder.gif',
+	stage: config.jsonPath + 'stage.json',
 };
 
 // 执行入口
@@ -47,6 +52,10 @@ window.onload = function() {
 					h = winSize.height;
 					control.winWidth = w;
 					control.winHeight = h;
+
+					// 计算格子的缩放倍数
+					control.zoom = w / config.mapSizeLimit / config.tileSize;
+					control.zoom = control.zoom.toFixed(2) - 0;
 
 					var now = new Date();
 					var hour = now.getHours();
@@ -77,9 +86,13 @@ window.onload = function() {
 					});
 					layerStage.addChild(layerStageRole);
 
-					// 计算格子的缩放倍数
-					control.zoom = w / config.mapSizeLimit / config.tileSize;
-					control.zoom = control.zoom.toFixed(2) - 0;
+					// 格子的选择框
+					var tileBorder = cc.Sprite.create(res.tileBorder);
+					tileBorder.attr({
+						scale: control.zoom,
+						visible: false
+					});
+					layerStage.addChild(tileBorder);
 
 					// 格子的按下事件
 					control.touchListener = cc.EventListener.create({
@@ -104,15 +117,11 @@ window.onload = function() {
 						},
 					});
 
-					funcInit();
-
-					// 格子的选择框
-					var tileBorder = cc.Sprite.create(res.tileBorder);
-					tileBorder.attr({
-						scale: control.zoom,
-						visible: false
+					// 加载关卡数据
+					cc.loader.loadJson(res.stage, function(_, data) {
+						control.stageData = data;
+						funcInit();
 					});
-					layerStage.addChild(tileBorder);
 				},
 				onExit: function() {
 					this._super();
@@ -129,29 +138,26 @@ window.onload = function() {
 function funcInit() {
 	var maps = control.maps;
 	maps = [];
+
 	for (var i = 0; i < control.mapSize; i += 1) {
 		maps.push([]);
 		for (var j = 0; j < control.mapSize; j += 1) {
-			var n = funcRand(6);
+			var n = funcRand(control.roleNum);
 			if (
 				(i >= 2 && n === maps[i - 1][j][0] && n === maps[i - 2][j][0]) ||
 				(j >= 2 && n === maps[i][j - 1][0] && n === maps[i][j - 2][0])
 			) {
-				n = funcRand(6, n);
+				n = funcRand(control.roleNum, n);
 			}
 			maps[i].push([n, 1]);
 		}
 	}
-	// 测试数据
-	maps = [
-		[[1, 1], [5, 1], [1, 1], [2, 1]],
-		[[3, 1], [0, 1], [5, 1], [4, 1]],
-		[[0, 1], [5, 1], [5, 1], [1, 1]],
-		[[2, 1], [3, 1], [4, 1], [0, 1]],
-	];
 
-	var layer = control.layerScene.children[0];
 	control.roles = {};
+	var layer = control.layerScene.children[0];
+	layer.children[0].removeAllChildren();
+	layer.children[1].removeAllChildren();
+
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = 0; j < maps[i].length; j += 1) {
 			if (!maps[i][j][1]) continue;
@@ -183,6 +189,7 @@ function funcInit() {
 			cc.eventManager.addListener(control.touchListener.clone(), role);
 		}
 	}
+
 	control.maps = maps;
 }
 
@@ -194,7 +201,7 @@ function funcPress() {
 	var col = parseInt(role.y / control.zoom / config.tileSize);
 	var row0 = parseInt(role0.x / control.zoom / config.tileSize);
 	var col0 = parseInt(role0.y / control.zoom / config.tileSize);
-	cc.log(row, col, role.tag);
+	// cc.log(row, col, role.tag);
 
 	if (!role0) {
 		control.firstRole = role;
@@ -214,15 +221,15 @@ function funcPress() {
 
 			// 临时交换, 方便下面的检测
 			var maps = control.maps;
-			var tempTag = maps[row][col][0];
-			maps[row][col][0] = maps[row0][col0][0];
-			maps[row0][col0][0] = tempTag;
+			var temp = maps[row][col];
+			maps[row][col] = maps[row0][col0];
+			maps[row0][col0] = temp;
 
 			var result = funcCheck();
 			if (!result) {
 				// 检测到没有连续再换回去
-				maps[row0][col0][0] = maps[row][col][0];
-				maps[row][col][0] = tempTag;
+				maps[row0][col0] = maps[row][col];
+				maps[row][col] = temp;
 				funcCancel(role);
 				return;
 			}
@@ -246,15 +253,15 @@ function funcCancel(role) {
 	var y0 = role0.y;
 	var x1 = role.x;
 	var y1 = role.y;
-	control.acceptTouch = false; // 暂时忽略触控的响应, 防止出现bug
 
-	var moveTo0 = cc.MoveTo.create(time, cc.p(x0, y0));
-	var moveTo1 = cc.MoveTo.create(time, cc.p(x1, y1));
+	var moveTo0 = cc.moveTo(time, cc.p(x0, y0));
+	var moveTo1 = cc.moveTo(time, cc.p(x1, y1));
 	role.runAction(moveTo0);
 	role.scheduleOnce(function() {
 		role.runAction(moveTo1);
 	}, time);
 
+	control.acceptTouch = false; // 暂时忽略触控的响应, 防止出现bug
 	role0.runAction(moveTo1);
 	role0.scheduleOnce(function() {
 		role0.runAction(moveTo0);
@@ -275,16 +282,16 @@ function funcSwitch(role, cb) {
 	var y0 = role0.y;
 	var x1 = role.x;
 	var y1 = role.y;
-	control.acceptTouch = false; // 暂时忽略触控的响应, 防止出现bug
 
-	var moveTo = cc.MoveTo.create(time, cc.p(x1, y1));
+	control.acceptTouch = false; // 暂时忽略触控的响应, 防止出现bug
 	var callFunc = cc.callFunc(function() {
+		cb();
 		control.firstRole = false;
 		control.acceptTouch = true; // 恢复触控的响应
-		cb();
 	});
+	var moveTo = cc.moveTo(time, cc.p(x1, y1));
 	var sequ = cc.sequence(moveTo, callFunc);
-	role.runAction(cc.MoveTo.create(time, cc.p(x0, y0)));
+	role.runAction(cc.moveTo(time, cc.p(x0, y0)));
 	role0.runAction(sequ);
 }
 
@@ -296,6 +303,13 @@ function funcCheck() {
 	var role = control.currentRole;
 	var row = parseInt(role.x / control.zoom / config.tileSize);
 	var col = parseInt(role.y / control.zoom / config.tileSize);
+	var role0 = control.firstRole;
+	var row0 = -1;
+	var col0 = -1;
+	if (role0) {
+		row0 = parseInt(role0.x / control.zoom / config.tileSize);
+		col0 = parseInt(role0.y / control.zoom / config.tileSize);
+	}
 
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = 0; j < maps[i].length; j += 1) {
@@ -304,7 +318,7 @@ function funcCheck() {
 
 			var tag = cell[0];
 
-			// 格子类型: 1正常, －1移除, 2横向贯穿, 3纵向贯穿, 4九格炸弹, 5吸走
+			// 格子类型: 1正常, －1移除, -2横向贯穿, -3纵向贯穿, -4九格炸弹, -5吸走
 
 			// 横向检查
 			if (
@@ -324,6 +338,9 @@ function funcCheck() {
 					// 5个在一条横线上
 					if (i < maps.length - 4 && maps[i + 4][j] && tag === maps[i + 4][j][0]) {
 						maps[i + 4][j][1] = -1;
+						if (maps[row][col] && maps[row][col][1] === -1) maps[row][col][1] = -5;
+						else if (role0 && maps[row0][col0][1] === -1) maps[row0][col0][1] = -5;
+						else cell[1] = -5;
 					}
 				}
 			}
@@ -343,6 +360,9 @@ function funcCheck() {
 
 					if (j < maps[i].length - 4 && maps[i][j + 4] && tag === maps[i][j + 4][0]) {
 						maps[i][j + 4][1] = -1;
+						if (maps[row][col] && maps[row][col][1] === -1) maps[row][col][1] = -5;
+						else if (role0 && maps[row0][col0][1] === -1) maps[row0][col0][1] = -5;
+						else cell[1] = -5;
 					}
 				}
 			}
@@ -351,17 +371,16 @@ function funcCheck() {
 			if (
 				(i < maps.length - 1 && maps[i + 1][j] && tag === maps[i + 1][j][0]) &&
 				(j < maps[i].length - 1 && maps[i][j + 1] && maps[i + 1][j + 1]) &&
-				(tag === maps[i][j + 1][0] && tag === maps[i + 1][j + 1][0] && !result)
+				(tag === maps[i][j + 1][0] && tag === maps[i + 1][j + 1][0])
 			) {
 				result = true;
 				cell[1] = -1;
 				maps[i + 1][j][1] = -1;
 				maps[i][j + 1][1] = -1;
 				maps[i + 1][j + 1][1] = -1;
-				maps[row][col][1] = 4;
-				cc.log(row, col);
-				role.zIndex = 1;
-				role.setTextureRect(cc.rect(roleSize, roleSize * tag, roleSize, roleSize));
+				if (maps[row][col] && maps[row][col][1] === -1) maps[row][col][1] = -4;
+				else if (role0 && maps[row0][col0][1] === -1) maps[row0][col0][1] = -4;
+				else cell[1] = -4;
 			}
 		}
 	}
@@ -371,22 +390,22 @@ function funcCheck() {
 
 // 移除连续的格子(带有移除标记的格子)
 function funcRemove() {
-	var maps = control.maps;
-	var roles = control.roles;
+	var maps = control.maps, roles = control.roles, zoom = control.zoom;
 	var layer = control.layerScene.children[0];
 	var time = config.time, roleSize = config.roleSize;
 
 	// 移除的动画
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = 0; j < maps[i].length; j += 1) {
-			if (maps[i][j][1] !== -1) continue;
+			if (maps[i][j][1] >= 1) continue;
 
+			// 只对标记为负数的格子做移除动画
 			var role = roles[i + '_' + j];
 			role.zIndex = 1;
 			role.setTextureRect(cc.rect(roleSize * 2, roleSize * maps[i][j][0], roleSize, roleSize));
-			var scaleTo = cc.ScaleTo.create(time, control.zoom * 1.5);
-			var fadeOut = cc.FadeOut.create(time);
-			var spawn = cc.spawn(scaleTo, fadeOut);
+			var scaleToBig = cc.scaleTo(time, zoom * 1.5);
+			var fadeOut = cc.fadeOut(time);
+			var spawn = cc.spawn(scaleToBig, fadeOut);
 			role.runAction(spawn);
 		}
 	}
@@ -395,19 +414,35 @@ function funcRemove() {
 	layer.scheduleOnce(function() {
 		control.acceptTouch = true; // 恢复触控的响应
 
-		// 移除实体
 		for (var i = 0; i < maps.length; i += 1) {
 			for (var j = 0; j < maps[i].length; j += 1) {
-				if (maps[i][j][1] !== -1) continue;
-
 				var role = roles[i + '_' + j];
-				layer.children[1].removeChild(role);
-				delete roles[i + '_' + j];
+				var cell = maps[i][j];
+				switch (cell[1]) {
+					case -1:
+						// 移除实体
+						layer.children[1].removeChild(role);
+						delete roles[i + '_' + j];
+						break;
+					case -2:
+						// 横向贯穿
+					case -3:
+						// 纵向贯穿
+					case -4:
+						// 九格炸弹
+					case -5:
+						// 吸走
+						cell[1] = Math.abs(cell[1]);
+						funcAddAnimation(role, cell[1]);
+						break;
+					default:
+						break;
+				}
 			}
 		}
 
 		funcFall();
-	}, time);
+	}, time + 0.1);
 }
 
 // 移除后要将浮空的角色落地
@@ -424,7 +459,8 @@ function funcFall() {
 		distance = 0;
 
 		for (var j = 0; j < maps[i].length; j += 1) {
-			if (maps[i][j][1] === -1) {
+			var cell = maps[i][j];
+			if (cell[1] === -1) {
 				distance += 1;
 				distanceMax = distance;
 			} else if (distance) {
@@ -438,7 +474,10 @@ function funcFall() {
 				var role1 = roles[i + '_' + (j - distance)];
 				layer.children[1].addChild(role1);
 				cc.eventManager.addListener(control.touchListener.clone(), role1);
-				role1.runAction(cc.MoveTo.create(time * distance, cc.p(x, y)));
+				role1.runAction(cc.moveTo(time * distance, cc.p(x, y)));
+
+				if (cell[1] >= 2 && cell[1] <= 5)
+					funcAddAnimation(role1, cell[1], time * distance);
 			}
 		}
 	}
@@ -476,7 +515,7 @@ function funcFill() {
 		distance = mapSize - maps[i].length;
 		if (distance > distanceMax) distanceMax = distance;
 		for (var j = maps[i].length, k = 0; j < mapSize; j += 1, k += 1) {
-			var num = funcRand(6);
+			var num = funcRand(control.roleNum);
 			maps[i].push([num, 1]);
 
 			var x = Math.round((tileSize * i + tileSize / 2) * zoom);
@@ -496,7 +535,7 @@ function funcFill() {
 			layer.children[1].addChild(role);
 			control.roles[i + '_' + j] = role;
 			cc.eventManager.addListener(control.touchListener.clone(), role);
-			role.runAction(cc.MoveTo.create(time * distance, cc.p(x, y1)));
+			role.runAction(cc.moveTo(time * distance, cc.p(x, y1)));
 		}
 	}
 
@@ -507,4 +546,44 @@ function funcFill() {
 		var result = funcCheck();
 		if (result) funcRemove();
 	}, time * distanceMax);
+}
+
+// 给特殊格子加上动画
+function funcAddAnimation(role, roleType, afterTime = 0) {
+	if (!role) return;
+
+	var roleSize = config.roleSize, time = config.time;
+	var layer = control.layerScene.children[0];
+	var zoom = control.zoom;
+	cc.log(role.tag, role);
+
+	layer.scheduleOnce(function() {
+		role.opacity = 255;
+		role.scale = zoom;
+		role.setTextureRect(cc.rect(roleSize, roleSize * role.tag, roleSize, roleSize));
+		var act = false;
+
+		switch (roleType){
+			case 2:
+				break;
+			case 3:
+				break;
+			case 4:
+				var scaleToBig = cc.scaleTo(time * 2, zoom * 1.1);
+				var scaleToSmall = cc.scaleTo(time * 2, zoom * 0.9);
+				var sequ = cc.sequence(scaleToBig, scaleToSmall);
+				act = cc.repeatForever(sequ);
+				if (roleType === 4) break;
+			case 5:
+				var rotate = cc.rotateTo(time * 2, 360);
+				var spawn = cc.spawn(sequ, rotate);
+				act = cc.repeatForever(spawn);
+				break;
+			default:
+				break;
+		}
+
+		if (act) role.runAction(act);
+
+	}, afterTime);
 }
