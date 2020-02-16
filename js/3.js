@@ -136,21 +136,37 @@ window.onload = function() {
 
 // 初始化所有格子
 function funcInit() {
+	var data = control.stageData[control.stageNum];
+	if (data) control.maps = data.map || [];
+	else control.maps = [];
 	var maps = control.maps;
-	maps = [];
 
-	for (var i = 0; i < control.mapSize; i += 1) {
-		maps.push([]);
-		for (var j = 0; j < control.mapSize; j += 1) {
-			var n = funcRand(control.roleNum);
-			if (
-				(i >= 2 && n === maps[i - 1][j][0] && n === maps[i - 2][j][0]) ||
-				(j >= 2 && n === maps[i][j - 1][0] && n === maps[i][j - 2][0])
-			) {
-				n = funcRand(control.roleNum, n);
+	if (maps.length === 0) {
+		// 生成一张随机地图
+		for (var i = 0; i < control.mapSize; i += 1) {
+			maps.push([]);
+			for (var j = 0; j < control.mapSize; j += 1) {
+				var n = funcRand(control.roleNum);
+				if (
+					(i >= 2 && n === maps[i - 1][j][0] && n === maps[i - 2][j][0]) ||
+					(j >= 2 && n === maps[i][j - 1][0] && n === maps[i][j - 2][0])
+				) {
+					n = funcRand(control.roleNum, n);
+				}
+				maps[i].push([n, 1]);
 			}
-			maps[i].push([n, 1]);
 		}
+	} else {
+		control.mapSize = maps.length;
+		var newMap = [];
+		for (var i = 0; i < maps.length; i += 1) {
+			newMap.push([]);
+			for (var j = 0; j < maps[i].length; j += 1) {
+				var n = maps[i][j] - 0;
+				newMap[i].push([n, 1]);
+			}
+		}
+		maps = newMap;
 	}
 
 	control.roles = {};
@@ -451,7 +467,7 @@ function funcFall() {
 	var roles = control.roles;
 	var layer = control.layerScene.children[0];
 	var time = config.time, tileSize = config.tileSize;
-	var distance = 0, distanceMax = 0;
+	var distance = 0;
 
 	for (var i = 0; i < maps.length; i += 1) {
 		var x = Math.round((tileSize * i + tileSize / 2) * zoom);
@@ -460,10 +476,8 @@ function funcFall() {
 
 		for (var j = 0; j < maps[i].length; j += 1) {
 			var cell = maps[i][j];
-			if (cell[1] === -1) {
-				distance += 1;
-				distanceMax = distance;
-			} else if (distance) {
+			if (cell[1] === -1) distance += 1;
+			else if (distance) {
 				y = Math.round((tileSize * (j - distance) + tileSize / 2) * zoom);
 				var role = roles[i + '_' + j];
 				if (!role) continue;
@@ -499,7 +513,7 @@ function funcFall() {
 		var result = funcCheck();
 		if (result) funcRemove();
 		else funcFill();
-	}, time * distanceMax);
+	}, time);
 }
 
 // 移除后需要补满
@@ -555,7 +569,6 @@ function funcAddAnimation(role, roleType, afterTime = 0) {
 	var roleSize = config.roleSize, time = config.time;
 	var layer = control.layerScene.children[0];
 	var zoom = control.zoom;
-	cc.log(role.tag, role);
 
 	layer.scheduleOnce(function() {
 		role.opacity = 255;
@@ -563,24 +576,18 @@ function funcAddAnimation(role, roleType, afterTime = 0) {
 		role.setTextureRect(cc.rect(roleSize, roleSize * role.tag, roleSize, roleSize));
 		var act = false;
 
-		switch (roleType){
-			case 2:
-				break;
-			case 3:
-				break;
-			case 4:
-				var scaleToBig = cc.scaleTo(time * 2, zoom * 1.1);
-				var scaleToSmall = cc.scaleTo(time * 2, zoom * 0.9);
-				var sequ = cc.sequence(scaleToBig, scaleToSmall);
+		if (roleType === 4 || roleType === 5) {
+			var scaleToBig = cc.scaleTo(time * 2, zoom * 1.1);
+			var scaleToSmall = cc.scaleTo(time * 2, zoom * 0.9);
+			var sequ = cc.sequence(scaleToBig, scaleToSmall);
+
+			if (roleType === 4) {
 				act = cc.repeatForever(sequ);
-				if (roleType === 4) break;
-			case 5:
+			} else {
 				var rotate = cc.rotateTo(time * 2, 360);
 				var spawn = cc.spawn(sequ, rotate);
 				act = cc.repeatForever(spawn);
-				break;
-			default:
-				break;
+			}
 		}
 
 		if (act) role.runAction(act);
