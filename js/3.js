@@ -60,6 +60,8 @@ window.onload = function() {
 					var now = new Date();
 					var hour = now.getHours();
 					var color = (hour >= 7 && hour <= 17) ? '#eeeeee' : '#333333';
+					document.body.style.backgroundColor = color;
+
 					// 场景层
 					control.layerScene = cc.LayerColor.create(funcColor(color), w, h);
 					this.addChild(control.layerScene);
@@ -149,7 +151,8 @@ function funcInit() {
 				var n = funcRand(control.roleNum);
 				if (
 					(i >= 2 && n === maps[i - 1][j][0] && n === maps[i - 2][j][0]) ||
-					(j >= 2 && n === maps[i][j - 1][0] && n === maps[i][j - 2][0])
+					(j >= 2 && n === maps[i][j - 1][0] && n === maps[i][j - 2][0]) ||
+					(i >= 1 && j >= 1 && n === maps[i - 1][j][0] && n === maps[i][j - 1][0] && n === maps[i - 1][j - 1][0])
 				) {
 					n = funcRand(control.roleNum, n);
 				}
@@ -332,72 +335,33 @@ function funcCheck() {
 			var cell = maps[i][j];
 			if (cell[1] === -1) continue;
 
-			var tag = cell[0];
-
 			// 格子类型: 1正常, －1移除, -2横向贯穿, -3纵向贯穿, -4九格炸弹, -5吸走
 
 			// 横向检查
-			if (
-				i < maps.length - 2 && maps[i + 1][j] && maps[i + 2][j] &&
-				tag === maps[i + 1][j][0] && tag === maps[i + 2][j][0]
-			) {
-				result = true;
-				// 打上移除标记
-				cell[1] = -1;
-				maps[i + 1][j][1] = -1;
-				maps[i + 2][j][1] = -1;
-
-				// 扩展检查, 4个在一条横线上
-				if (i < maps.length - 3 && maps[i + 3][j] && tag === maps[i + 3][j][0]) {
-					maps[i + 3][j][1] = -1;
-
-					// 5个在一条横线上
-					if (i < maps.length - 4 && maps[i + 4][j] && tag === maps[i + 4][j][0]) {
-						maps[i + 4][j][1] = -1;
-						if (maps[row][col] && maps[row][col][1] === -1) maps[row][col][1] = -5;
-						else if (role0 && maps[row0][col0][1] === -1) maps[row0][col0][1] = -5;
-						else cell[1] = -5;
-					}
-				}
+			var items = [[i, j]];
+			for (var k = 1; k <= 4; k += 1) {
+				if (maps[i + k] && maps[i + k][j] && cell[0] === maps[i + k][j][0])
+					items.push([i + k, j]);
+				else break;
 			}
 
 			// 纵向检查
-			if (
-				j < maps[i].length - 2 && maps[i][j + 1] && maps[i][j + 2] &&
-				tag === maps[i][j + 1][0] && tag === maps[i][j + 2][0]
-			) {
-				result = true;
-				cell[1] = -1;
-				maps[i][j + 1][1] = -1;
-				maps[i][j + 2][1] = -1;
-
-				if (j < maps[i].length - 3 && maps[i][j + 3] && tag === maps[i][j + 3][0]) {
-					maps[i][j + 3][1] = -1;
-
-					if (j < maps[i].length - 4 && maps[i][j + 4] && tag === maps[i][j + 4][0]) {
-						maps[i][j + 4][1] = -1;
-						if (maps[row][col] && maps[row][col][1] === -1) maps[row][col][1] = -5;
-						else if (role0 && maps[row0][col0][1] === -1) maps[row0][col0][1] = -5;
-						else cell[1] = -5;
-					}
+			if (items.length === 1) {
+				for (var k = 1; k <= 4; k += 1) {
+					if (maps[i][j + k] && cell[0] === maps[i][j + k][0])
+						items.push([i, j + k]);
+					else break;
 				}
 			}
 
-			// 田字检查, 4个相同的在一起呈田字
-			if (
-				(i < maps.length - 1 && maps[i + 1][j] && tag === maps[i + 1][j][0]) &&
-				(j < maps[i].length - 1 && maps[i][j + 1] && maps[i + 1][j + 1]) &&
-				(tag === maps[i][j + 1][0] && tag === maps[i + 1][j + 1][0])
-			) {
+			if (items.length >= 3) {
 				result = true;
-				cell[1] = -1;
-				maps[i + 1][j][1] = -1;
-				maps[i][j + 1][1] = -1;
-				maps[i + 1][j + 1][1] = -1;
-				if (maps[row][col] && maps[row][col][1] === -1) maps[row][col][1] = -4;
-				else if (role0 && maps[row0][col0][1] === -1) maps[row0][col0][1] = -4;
-				else cell[1] = -4;
+				for (var l = 0; l < items.length; l += 1) {
+					var item = items[l];
+					maps[item[0]][item[1]][1] = -1; // 打上移除标记
+				}
 			}
+
 		}
 	}
 
@@ -563,7 +527,7 @@ function funcFill() {
 }
 
 // 给特殊格子加上动画
-function funcAddAnimation(role, roleType, afterTime = 0) {
+function funcAddAnimation(role, roleType, afterTime) {
 	if (!role) return;
 
 	var roleSize = config.roleSize, time = config.time;
@@ -592,5 +556,36 @@ function funcAddAnimation(role, roleType, afterTime = 0) {
 
 		if (act) role.runAction(act);
 
-	}, afterTime);
+	}, afterTime || 0);
+}
+
+// 炸弹格子, 2整行消除, 3整列消除, 4小范围炸弹, 5黑洞
+function funcBomb(type, row) {
+	var maps = control.maps;
+
+	switch (type) {
+		case 2:
+			// 2整行消除
+			for (var i = 0; i < maps.length; i += 1) {
+				if (maps[i][row][1] === 1) maps[i][row][1] = -1;
+			}
+			break;
+		case 3:
+			// 3整列消除
+			for (var i = 0; i < maps[row].length; i += 1) {
+				if (maps[row][i][1] === 1) maps[row][i][1] = -1;
+			}
+			break;
+		case 4:
+			// 4小范围炸弹
+			for (var i = row - 1; i <= row + 1; i += 1) {
+				for (var j = col - 1; j <= col + 1; j += 1) {
+					if (maps[i][j][1] === 1) maps[i][j][1] = -1;
+				}
+			}
+			break;
+		default:
+			// 5黑洞
+			break;
+	}
 }
