@@ -333,8 +333,6 @@ function funcCheck() {
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = 0; j < maps[i].length; j += 1) {
 			var cell = maps[i][j];
-			if (cell[1] === -1) continue;
-
 			// 格子类型: 1正常, －1移除, -2横向贯穿, -3纵向贯穿, -4九格炸弹, -5吸走
 
 			// 横向检查
@@ -344,16 +342,21 @@ function funcCheck() {
 					items.push([i + k, j]);
 				else break;
 			}
-
-			// 纵向检查
-			if (items.length === 1) {
-				for (var k = 1; k <= 4; k += 1) {
-					if (maps[i][j + k] && cell[0] === maps[i][j + k][0])
-						items.push([i, j + k]);
-					else break;
+			if (items.length >= 3) {
+				result = true;
+				for (var l = 0; l < items.length; l += 1) {
+					var item = items[l];
+					maps[item[0]][item[1]][1] = -1; // 打上移除标记
 				}
 			}
 
+			// 纵向检查
+			items = [[i, j]];
+			for (var k = 1; k <= 4; k += 1) {
+				if (maps[i][j + k] && cell[0] === maps[i][j + k][0])
+					items.push([i, j + k]);
+				else break;
+			}
 			if (items.length >= 3) {
 				result = true;
 				for (var l = 0; l < items.length; l += 1) {
@@ -431,7 +434,7 @@ function funcFall() {
 	var roles = control.roles;
 	var layer = control.layerScene.children[0];
 	var time = config.time, tileSize = config.tileSize;
-	var distance = 0;
+	var distance = 0, distanceMax = 0;
 
 	for (var i = 0; i < maps.length; i += 1) {
 		var x = Math.round((tileSize * i + tileSize / 2) * zoom);
@@ -440,8 +443,10 @@ function funcFall() {
 
 		for (var j = 0; j < maps[i].length; j += 1) {
 			var cell = maps[i][j];
-			if (cell[1] === -1) distance += 1;
-			else if (distance) {
+			if (cell[1] === -1) {
+				distance += 1;
+				if (distance > distanceMax) distanceMax = distance;
+			} else if (distance) {
 				y = Math.round((tileSize * (j - distance) + tileSize / 2) * zoom);
 				var role = roles[i + '_' + j];
 				if (!role) continue;
@@ -477,7 +482,7 @@ function funcFall() {
 		var result = funcCheck();
 		if (result) funcRemove();
 		else funcFill();
-	}, time);
+	}, time * distanceMax);
 }
 
 // 移除后需要补满
