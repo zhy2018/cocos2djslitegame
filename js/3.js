@@ -5,6 +5,14 @@ var config = {
 	time: 0.2, // 动画时长(角色下落位移)
 	imgPath: 'assets/resources/img/',
 	jsonPath: 'assets/resources/json/',
+	hpLine: 256,
+	hpLimit: 1024,
+	hpStep: 64,
+	mpLimit: 32,
+	mpStep: 1,
+	dpLimit: 128,
+	dpStep: 8,
+	scaleUI: 2,
 };
 var control = {
 	winWidth: 0,
@@ -23,10 +31,19 @@ var control = {
 	stageData: {},
 };
 var res = {
-	roles: config.imgPath + 'roles.png',
-	tileBg: config.imgPath + 'tileBg.gif',
-	tileBorder: config.imgPath + 'tileBorder.gif',
+	img: config.imgPath + 'dragonball.png',
 	stage: config.jsonPath + 'stage.json',
+};
+var game = {
+	hero: {
+		name: '小悟空',
+		hp: 512,
+		hpFull: 512,
+		mp: 8,
+		mpFull: 8,
+		dp: 0,
+		dpFull: config.dpLimit,
+	},
 };
 
 // 执行入口
@@ -89,7 +106,10 @@ window.onload = function() {
 					layerStage.addChild(layerStageRole);
 
 					// 格子的选择框
-					var tileBorder = cc.Sprite.create(res.tileBorder);
+					var tileBorder = cc.Sprite.create(
+						res.img,
+						cc.rect(32, 32, 30, 30)
+					);
 					tileBorder.attr({
 						scale: control.zoom,
 						visible: false
@@ -124,6 +144,9 @@ window.onload = function() {
 						control.stageData = data;
 						funcInit();
 					});
+
+					funcShowHeroInfo();
+					funcUpdateHeroInfo();
 				},
 				onExit: function() {
 					this._super();
@@ -138,6 +161,7 @@ window.onload = function() {
 
 // 初始化所有格子
 function funcInit() {
+	var tileSize = config.tileSize, roleSize = config.roleSize;
 	var data = control.stageData[control.stageNum];
 	if (data) control.maps = data.map || [];
 	else control.maps = [];
@@ -182,10 +206,13 @@ function funcInit() {
 			if (!maps[i][j][1]) continue;
 
 			var num = maps[i][j][0];
-			var x = Math.round((config.tileSize * i + config.tileSize / 2) * control.zoom);
-			var y = Math.round((config.tileSize * j + config.tileSize / 2) * control.zoom);
+			var x = Math.round((tileSize * i + tileSize / 2) * control.zoom);
+			var y = Math.round((tileSize * j + tileSize / 2) * control.zoom);
 
-			var bg = cc.Sprite.create(res.tileBg);
+			var bg = cc.Sprite.create(
+				res.img,
+				cc.rect(0, 32, tileSize, tileSize)
+			);
 			bg.attr({
 				x: x,
 				y: y,
@@ -194,8 +221,8 @@ function funcInit() {
 			layer.children[0].addChild(bg);
 
 			var role = cc.Sprite.create(
-				res.roles,
-				cc.rect(0, num * config.roleSize, config.roleSize, config.roleSize)
+				res.img,
+				cc.rect(num * roleSize, 0, roleSize, roleSize)
 			);
 			role.attr({
 				x: x,
@@ -377,19 +404,26 @@ function funcRemove() {
 	var layer = control.layerScene.children[0];
 	var time = config.time, roleSize = config.roleSize;
 
+	var sum = [];
+	for (var i = 0; i < control.roleNum; i += 1) {
+		sum.push(0);
+	}
+
 	// 移除的动画
 	for (var i = 0; i < maps.length; i += 1) {
 		for (var j = 0; j < maps[i].length; j += 1) {
-			if (maps[i][j][1] >= 1) continue;
+			var cell = maps[i][j];
+			if (cell[1] >= 1) continue;
 
 			// 只对标记为负数的格子做移除动画
 			var role = roles[i + '_' + j];
 			role.zIndex = 1;
-			role.setTextureRect(cc.rect(roleSize * 2, roleSize * maps[i][j][0], roleSize, roleSize));
 			var scaleToBig = cc.scaleTo(time, zoom * 1.5);
 			var fadeOut = cc.fadeOut(time);
 			var spawn = cc.spawn(scaleToBig, fadeOut);
 			role.runAction(spawn);
+
+			sum[cell[0]] += 1;
 		}
 	}
 
@@ -401,31 +435,29 @@ function funcRemove() {
 			for (var j = 0; j < maps[i].length; j += 1) {
 				var role = roles[i + '_' + j];
 				var cell = maps[i][j];
-				switch (cell[1]) {
-					case -1:
-						// 移除实体
-						layer.children[1].removeChild(role);
-						delete roles[i + '_' + j];
-						break;
-					case -2:
-						// 横向贯穿
-					case -3:
-						// 纵向贯穿
-					case -4:
-						// 九格炸弹
-					case -5:
-						// 吸走
-						cell[1] = Math.abs(cell[1]);
-						funcAddAnimation(role, cell[1]);
-						break;
-					default:
-						break;
-				}
+				if (cell[1] !== -1) continue;
+
+				// 移除实体
+				layer.children[1].removeChild(role);
+				delete roles[i + '_' + j];
 			}
 		}
 
 		funcFall();
 	}, time + 0.1);
+
+	var mapping = [0, 'dp', 'hp', 'mp'];
+	var hero = game.hero;
+	for (var i = 1; i < control.roleNum; i += 1) {
+		if (sum[i] === 0) continue;
+
+		var value = hero[mapping[i]];
+		var valueFull = hero[mapping[i] + 'Full'];
+		value += config[mapping[i] + 'Step'] * sum[i];
+		if (value > valueFull) value = valueFull;
+		hero[mapping[i]] = value;
+		funcUpdateHeroInfo(mapping[i]);
+	}
 }
 
 // 移除后要将浮空的角色落地
@@ -458,9 +490,6 @@ function funcFall() {
 				layer.children[1].addChild(role1);
 				cc.eventManager.addListener(control.touchListener.clone(), role1);
 				role1.runAction(cc.moveTo(time * distance, cc.p(x, y)));
-
-				if (cell[1] >= 2 && cell[1] <= 5)
-					funcAddAnimation(role1, cell[1], time * distance);
 			}
 		}
 	}
@@ -490,7 +519,7 @@ function funcFill() {
 	var maps = control.maps;
 	var roles = control.roles;
 	var layer = control.layerScene.children[0];
-	var time = config.time, tileSize = config.tileSize;
+	var time = config.time, tileSize = config.tileSize, roleSize = config.roleSize;
 	var mapSize = control.mapSize, zoom = control.zoom;
 	var distance = 0, distanceMax = 0;
 
@@ -506,8 +535,8 @@ function funcFill() {
 			var y1 = Math.round((tileSize * j + tileSize / 2) * zoom);
 
 			var role = cc.Sprite.create(
-				res.roles,
-				cc.rect(0, num * config.roleSize, config.roleSize, config.roleSize)
+				res.img,
+				cc.rect(num * roleSize, 0, roleSize, roleSize)
 			);
 			role.attr({
 				x: x,
@@ -531,66 +560,95 @@ function funcFill() {
 	}, time * distanceMax);
 }
 
-// 给特殊格子加上动画
-function funcAddAnimation(role, roleType, afterTime) {
-	if (!role) return;
+// 显示血槽, 防御槽和气槽
+function funcShowHeroInfo() {
+	var w = control.winWidth, h = control.winHeight;
+	var obj = control.layerScene.children[0];
+	var scale = config.scaleUI;
 
-	var roleSize = config.roleSize, time = config.time;
-	var layer = control.layerScene.children[0];
-	var zoom = control.zoom;
+	var layer = cc.Layer.create();
+	layer.attr({ width: w, height: h });
+	control.layerScene.addChild(layer);
 
-	layer.scheduleOnce(function() {
-		role.opacity = 255;
-		role.scale = zoom;
-		role.setTextureRect(cc.rect(roleSize, roleSize * role.tag, roleSize, roleSize));
-		var act = false;
+	var layerTop = cc.LayerColor.create(cc.color(255, 0, 0, 0), w, h - obj.height - obj.y);
+	layerTop.attr({ y: obj.y + obj.height });
+	layer.addChild(layerTop);
 
-		if (roleType === 4 || roleType === 5) {
-			var scaleToBig = cc.scaleTo(time * 2, zoom * 1.1);
-			var scaleToSmall = cc.scaleTo(time * 2, zoom * 0.9);
-			var sequ = cc.sequence(scaleToBig, scaleToSmall);
+	var hpUI = cc.Sprite.create(res.img, cc.rect(0, 64, 112, 32));
+	hpUI.attr({
+		y: layerTop.height,
+		anchorX: 0,
+		anchorY: 1,
+		scale: scale,
+	});
+	layerTop.addChild(hpUI);
 
-			if (roleType === 4) {
-				act = cc.repeatForever(sequ);
-			} else {
-				var rotate = cc.rotateTo(time * 2, 360);
-				var spawn = cc.spawn(sequ, rotate);
-				act = cc.repeatForever(spawn);
-			}
-		}
+	var layerHP0 = cc.Sprite.create(res.img, cc.rect(114, 81, 1, 6));
+	layerHP0.attr({
+		x: 32 * scale,
+		y: (layerTop.height - 81) * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scaleY: scale,
+		scaleX: 0,
+	});
+	layerTop.addChild(layerHP0);
+	var layerHP1 = cc.Sprite.create(res.img, cc.rect(116, 81, 1, 6));
+	layerHP1.attr({
+		x: 32 * scale,
+		y: (layerTop.height - 81) * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scaleY: scale,
+		scaleX: 0,
+	});
+	layerTop.addChild(layerHP1);
+	var layerHP2 = cc.Sprite.create(res.img, cc.rect(118, 81, 1, 6));
+	layerHP2.attr({
+		x: 32 * scale,
+		y: (layerTop.height - 81) * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scaleY: scale,
+		scaleX: 0,
+	});
+	layerTop.addChild(layerHP2);
+	var layerHP3 = cc.Sprite.create(res.img, cc.rect(120, 81, 1, 6));
+	layerHP3.attr({
+		x: 32 * scale,
+		y: (layerTop.height - 81) * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scaleY: scale,
+		scaleX: 0,
+	});
+	layerTop.addChild(layerHP3);
 
-		if (act) role.runAction(act);
+	var layerDP = cc.LayerColor.create(funcColor('#00e800'), 0, 2 * scale);
+	layerDP.attr({
+		x: 32 * scale,
+		y: (layerTop.height - 91.5) * scale,
+	});
+	layerTop.addChild(layerDP);
 
-	}, afterTime || 0);
+	var layerBottom = cc.LayerColor.create(cc.color(0, 255, 0, 0), w, obj.y);
+	layer.addChild(layerBottom);
 }
 
-// 炸弹格子, 2整行消除, 3整列消除, 4小范围炸弹, 5黑洞
-function funcBomb(type, row) {
-	var maps = control.maps;
+// 更新血槽, 防御槽和气槽
+function funcUpdateHeroInfo(type) {
+	var layerTop = control.layerScene.children[1].children[0].children;
+	var scale = config.scaleUI;
+	var hero = game.hero;
 
-	switch (type) {
-		case 2:
-			// 2整行消除
-			for (var i = 0; i < maps.length; i += 1) {
-				if (maps[i][row][1] === 1) maps[i][row][1] = -1;
-			}
-			break;
-		case 3:
-			// 3整列消除
-			for (var i = 0; i < maps[row].length; i += 1) {
-				if (maps[row][i][1] === 1) maps[row][i][1] = -1;
-			}
-			break;
-		case 4:
-			// 4小范围炸弹
-			for (var i = row - 1; i <= row + 1; i += 1) {
-				for (var j = col - 1; j <= col + 1; j += 1) {
-					if (maps[i][j][1] === 1) maps[i][j][1] = -1;
-				}
-			}
-			break;
-		default:
-			// 5黑洞
-			break;
+	if (!type || type === 'hp') {
+		
+	}
+	if (!type || type === 'mp') {
+		
+	}
+	if (!type || type === 'dp') {
+		var layerDP = layerTop[5];
+		layerDP.attr({ width: hero.dp / scale });
 	}
 }
