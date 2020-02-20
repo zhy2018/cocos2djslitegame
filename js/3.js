@@ -7,7 +7,7 @@ var config = {
 	jsonPath: 'assets/resources/json/',
 	hpLine: 256,
 	hpLimit: 1024,
-	hpStep: 64,
+	hpStep: 16,
 	mpLimit: 32,
 	mpStep: 1,
 	dpLimit: 128,
@@ -37,10 +37,11 @@ var res = {
 var game = {
 	hero: {
 		name: '小悟空',
-		hp: 512,
-		hpFull: 512,
-		mp: 8,
-		mpFull: 8,
+		hp: 0,
+		hpFull: config.hpLimit,
+		mp: 0,
+		mpGather: 0,
+		mpFull: config.mpLimit,
 		dp: 0,
 		dpFull: config.dpLimit,
 	},
@@ -565,6 +566,7 @@ function funcShowHeroInfo() {
 	var w = control.winWidth, h = control.winHeight;
 	var obj = control.layerScene.children[0];
 	var scale = config.scaleUI;
+	var hero = game.hero;
 
 	var layer = cc.Layer.create();
 	layer.attr({ width: w, height: h });
@@ -583,72 +585,164 @@ function funcShowHeroInfo() {
 	});
 	layerTop.addChild(hpUI);
 
-	var layerHP0 = cc.Sprite.create(res.img, cc.rect(114, 81, 1, 6));
-	layerHP0.attr({
+	var hp0 = cc.Sprite.create(res.img, cc.rect(114, 81, 1, 6));
+	hp0.attr({
 		x: 32 * scale,
-		y: (layerTop.height - 81) * scale,
+		y: hpUI.y - 17 * scale,
 		anchorX: 0,
 		anchorY: 1,
 		scaleY: scale,
 		scaleX: 0,
 	});
-	layerTop.addChild(layerHP0);
-	var layerHP1 = cc.Sprite.create(res.img, cc.rect(116, 81, 1, 6));
-	layerHP1.attr({
+	layerTop.addChild(hp0);
+	var hp1 = cc.Sprite.create(res.img, cc.rect(116, 81, 1, 6));
+	hp1.attr({
 		x: 32 * scale,
-		y: (layerTop.height - 81) * scale,
+		y: hpUI.y - 17 * scale,
 		anchorX: 0,
 		anchorY: 1,
 		scaleY: scale,
 		scaleX: 0,
 	});
-	layerTop.addChild(layerHP1);
-	var layerHP2 = cc.Sprite.create(res.img, cc.rect(118, 81, 1, 6));
-	layerHP2.attr({
+	layerTop.addChild(hp1);
+	var hp2 = cc.Sprite.create(res.img, cc.rect(118, 81, 1, 6));
+	hp2.attr({
 		x: 32 * scale,
-		y: (layerTop.height - 81) * scale,
+		y: hpUI.y - 17 * scale,
 		anchorX: 0,
 		anchorY: 1,
 		scaleY: scale,
 		scaleX: 0,
 	});
-	layerTop.addChild(layerHP2);
-	var layerHP3 = cc.Sprite.create(res.img, cc.rect(120, 81, 1, 6));
-	layerHP3.attr({
+	layerTop.addChild(hp2);
+	var hp3 = cc.Sprite.create(res.img, cc.rect(120, 81, 1, 6));
+	hp3.attr({
 		x: 32 * scale,
-		y: (layerTop.height - 81) * scale,
+		y: hpUI.y - 17 * scale,
 		anchorX: 0,
 		anchorY: 1,
 		scaleY: scale,
 		scaleX: 0,
 	});
-	layerTop.addChild(layerHP3);
+	layerTop.addChild(hp3);
 
-	var layerDP = cc.LayerColor.create(funcColor('#00e800'), 0, 2 * scale);
-	layerDP.attr({
+	var dp = cc.LayerColor.create(funcColor('#00e800'), 0, 2 * scale);
+	dp.attr({
 		x: 32 * scale,
-		y: (layerTop.height - 91.5) * scale,
+		y: hpUI.y - 28 * scale,
 	});
-	layerTop.addChild(layerDP);
+	layerTop.addChild(dp);
+
+	var name = cc.LabelTTF.create(hero.name, '黑体', 16);
+	name.attr({
+		x: 32 * scale,
+		y: hpUI.y - 8 * scale,
+		anchorX: 0,
+		anchorY: 1,
+		lineWidth: 2,
+		strokeStyle: cc.color(0, 0, 0, 255),
+	});
+	layerTop.addChild(name);
 
 	var layerBottom = cc.LayerColor.create(cc.color(0, 255, 0, 0), w, obj.y);
 	layer.addChild(layerBottom);
+
+	var mpUI = cc.Sprite.create(res.img, cc.rect(2, 98, 20, 19));
+	mpUI.attr({
+		x: 24 * scale,
+		y: layerBottom.height - 8 * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scale: scale,
+	});
+	layerBottom.addChild(mpUI);
+
+	var ii = Math.round(hero.mpFull / 8);
+	for (var i = 0; i < ii; i += 1) {
+		var mpLoader = cc.Sprite.create(res.img, cc.rect(24, 106, 16, 8));
+		mpLoader.attr({
+			x: (16 * i + 43) * scale,
+			y: mpUI.y - 7 * scale,
+			anchorX: 0,
+			anchorY: 1,
+			scale: scale,
+		});
+		layerBottom.addChild(mpLoader);
+	}
+
+	var mpLoader2 = cc.Sprite.create(res.img, cc.rect(48, 106, 5, 8));
+	mpLoader2.attr({
+		x: (16 * ii + 43) * scale,
+		y: mpUI.y - 7 * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scale: scale,
+	});
+	layerBottom.addChild(mpLoader2);
+
+	var mp0 = cc.Sprite.create(res.img, cc.rect(56, 108, 1, 4));
+	mp0.attr({
+		x: 43 * scale,
+		y: mpUI.y - 9 * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scaleY: scale,
+	});
+	layerBottom.addChild(mp0);
+	var mp1 = cc.Sprite.create(res.img, cc.rect(58, 108, 1, 4));
+	mp1.attr({
+		x: 43 * scale,
+		y: mpUI.y - 9 * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scaleY: scale,
+	});
+	layerBottom.addChild(mp1);
+	var mp2 = cc.Sprite.create(res.img, cc.rect(60, 108, 1, 4));
+	mp2.attr({
+		x: 43 * scale,
+		y: mpUI.y - 9 * scale,
+		anchorX: 0,
+		anchorY: 1,
+		scaleY: scale,
+	});
+	layerBottom.addChild(mp2);
 }
 
 // 更新血槽, 防御槽和气槽
 function funcUpdateHeroInfo(type) {
-	var layerTop = control.layerScene.children[1].children[0].children;
+	var layer = control.layerScene.children[1];
+	var layerTop = layer.children[0].children;
+	var layerBottom = layer.children[1].children;
 	var scale = config.scaleUI;
 	var hero = game.hero;
+	var hpLine = config.hpLine;
 
 	if (!type || type === 'hp') {
-		
+		var hp = [];
+		var ii = parseInt(hero.hp / hpLine);
+
+		for (var i = 0; i < ii; i += 1) {
+			hp.push(hpLine);
+		}
+		if (hero.hp % hpLine) hp.push(hero.hp % hpLine);
+
+		for (var i = 0; i < hp.length; i += 1) {
+			layerTop[i + 1].attr({ scaleX: hp[i] / scale });
+		}
 	}
-	if (!type || type === 'mp') {
-		
-	}
+
 	if (!type || type === 'dp') {
-		var layerDP = layerTop[5];
-		layerDP.attr({ width: hero.dp / scale });
+		layerTop[5].attr({ width: hero.dp / scale });
+	}
+
+	if (!type || type === 'mp') {
+		var len = layerBottom.length;
+		var mpFix = parseInt(hero.mp / 8) * 8;
+		layerBottom[len - 3].attr({ scaleX: hero.mp * 4 });
+		layerBottom[len - 2].attr({ scaleX: mpFix * 4 });
+		if (hero.mpGather > 0) {
+			layerBottom[len - 1].attr({ scaleX: hero.mpGather * 4 });
+		}
 	}
 }
