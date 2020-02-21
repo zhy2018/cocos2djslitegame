@@ -31,8 +31,10 @@ var control = {
 	stageData: {},
 };
 var res = {
-	img: config.imgPath + 'dragonball.png',
+	img: config.imgPath + 'sprite.png',
 	stage: config.jsonPath + 'stage.json',
+	act: config.imgPath + 'action.png',
+	bg: config.imgPath + 'bg.png',
 };
 var game = {
 	hero: {
@@ -44,6 +46,7 @@ var game = {
 		mpFull: config.mpLimit,
 		dp: 0,
 		dpFull: config.dpLimit,
+		status: 'ok',
 	},
 };
 
@@ -75,19 +78,29 @@ window.onload = function() {
 					control.zoom = w / config.mapSizeLimit / config.tileSize;
 					control.zoom = control.zoom.toFixed(2) - 0;
 
-					var now = new Date();
-					var hour = now.getHours();
-					var color = (hour >= 7 && hour <= 17) ? '#eeeeee' : '#333333';
+					var colors = ['#007858'];
+					var color = colors[control.stageNum - 1];
 					document.body.style.backgroundColor = color;
 
 					// 场景层
 					control.layerScene = cc.LayerColor.create(funcColor(color), w, h);
 					this.addChild(control.layerScene);
 
+					// 背景图
+					var scale = w / 264;
+					scale = scale.toFixed(3) - 0;
+					var bg = cc.Sprite.create(res.bg);
+					bg.attr({
+						y: h,
+						anchorX: 0,
+						anchorY: 1,
+						scale: scale,
+					});
+					control.layerScene.addChild(bg);
+
 					// 舞台层
-					color = (hour >= 7 && hour <= 17) ? '#dddddd' : '#444444';
-					var layerStage = cc.LayerColor.create(funcColor(color), w, w);
-					layerStage.attr({ y: h / 2 - w / 2 });
+					var layerStage = cc.LayerColor.create(cc.color(255, 0, 0, 0), w, w);
+					layerStage.attr({ y: 64 });
 					control.layerScene.addChild(layerStage);
 
 					// 格子背景层
@@ -198,7 +211,7 @@ function funcInit() {
 	}
 
 	control.roles = {};
-	var layer = control.layerScene.children[0];
+	var layer = control.layerScene.children[1];
 	layer.children[0].removeAllChildren();
 	layer.children[1].removeAllChildren();
 
@@ -218,6 +231,7 @@ function funcInit() {
 				x: x,
 				y: y,
 				scale: control.zoom,
+				opacity: 192,
 			});
 			layer.children[0].addChild(bg);
 
@@ -293,7 +307,7 @@ function funcPress() {
 // 取消两个角色位置的交换
 function funcCancel(role) {
 	var role0 = control.firstRole;
-	var border = control.layerScene.children[0].children[2];
+	var border = control.layerScene.children[1].children[2];
 	border.attr({ visible: false });
 	var time = config.time;
 	var x0 = role0.x;
@@ -322,7 +336,7 @@ function funcCancel(role) {
 // 交换两个角色的位置
 function funcSwitch(role, cb) {
 	var role0 = control.firstRole;
-	var border = control.layerScene.children[0].children[2];
+	var border = control.layerScene.children[1].children[2];
 	border.attr({ visible: false });
 	var time = config.time;
 	var x0 = role0.x;
@@ -402,7 +416,7 @@ function funcCheck() {
 // 移除连续的格子(带有移除标记的格子)
 function funcRemove() {
 	var maps = control.maps, roles = control.roles, zoom = control.zoom;
-	var layer = control.layerScene.children[0];
+	var layer = control.layerScene.children[1];
 	var time = config.time, roleSize = config.roleSize;
 
 	var sum = [];
@@ -465,7 +479,7 @@ function funcRemove() {
 function funcFall() {
 	var maps = control.maps, zoom = control.zoom;
 	var roles = control.roles;
-	var layer = control.layerScene.children[0];
+	var layer = control.layerScene.children[1];
 	var time = config.time, tileSize = config.tileSize;
 	var distance = 0, distanceMax = 0;
 
@@ -519,7 +533,7 @@ function funcFall() {
 function funcFill() {
 	var maps = control.maps;
 	var roles = control.roles;
-	var layer = control.layerScene.children[0];
+	var layer = control.layerScene.children[1];
 	var time = config.time, tileSize = config.tileSize, roleSize = config.roleSize;
 	var mapSize = control.mapSize, zoom = control.zoom;
 	var distance = 0, distanceMax = 0;
@@ -564,7 +578,7 @@ function funcFill() {
 // 显示血槽, 防御槽和气槽
 function funcShowHeroInfo() {
 	var w = control.winWidth, h = control.winHeight;
-	var obj = control.layerScene.children[0];
+	var obj = control.layerScene.children[1];
 	var scale = config.scaleUI;
 	var hero = game.hero;
 
@@ -644,12 +658,12 @@ function funcShowHeroInfo() {
 	});
 	layerTop.addChild(name);
 
-	var layerBottom = cc.LayerColor.create(cc.color(0, 255, 0, 0), w, obj.y);
+	var layerBottom = cc.LayerColor.create(cc.color(0, 255, 0, 0), w, 64);
 	layer.addChild(layerBottom);
 
 	var mpUI = cc.Sprite.create(res.img, cc.rect(2, 98, 20, 19));
 	mpUI.attr({
-		x: 24 * scale,
+		x: 32 * scale,
 		y: layerBottom.height - 8 * scale,
 		anchorX: 0,
 		anchorY: 1,
@@ -657,11 +671,12 @@ function funcShowHeroInfo() {
 	});
 	layerBottom.addChild(mpUI);
 
+	var x0 = 51;
 	var ii = Math.round(hero.mpFull / 8);
 	for (var i = 0; i < ii; i += 1) {
 		var mpLoader = cc.Sprite.create(res.img, cc.rect(24, 106, 16, 8));
 		mpLoader.attr({
-			x: (16 * i + 43) * scale,
+			x: (16 * i + x0) * scale,
 			y: mpUI.y - 7 * scale,
 			anchorX: 0,
 			anchorY: 1,
@@ -672,7 +687,7 @@ function funcShowHeroInfo() {
 
 	var mpLoader2 = cc.Sprite.create(res.img, cc.rect(48, 106, 5, 8));
 	mpLoader2.attr({
-		x: (16 * ii + 43) * scale,
+		x: (16 * ii + x0) * scale,
 		y: mpUI.y - 7 * scale,
 		anchorX: 0,
 		anchorY: 1,
@@ -682,7 +697,7 @@ function funcShowHeroInfo() {
 
 	var mp0 = cc.Sprite.create(res.img, cc.rect(56, 108, 1, 4));
 	mp0.attr({
-		x: 43 * scale,
+		x: x0 * scale,
 		y: mpUI.y - 9 * scale,
 		anchorX: 0,
 		anchorY: 1,
@@ -691,7 +706,7 @@ function funcShowHeroInfo() {
 	layerBottom.addChild(mp0);
 	var mp1 = cc.Sprite.create(res.img, cc.rect(58, 108, 1, 4));
 	mp1.attr({
-		x: 43 * scale,
+		x: x0 * scale,
 		y: mpUI.y - 9 * scale,
 		anchorX: 0,
 		anchorY: 1,
@@ -700,7 +715,7 @@ function funcShowHeroInfo() {
 	layerBottom.addChild(mp1);
 	var mp2 = cc.Sprite.create(res.img, cc.rect(60, 108, 1, 4));
 	mp2.attr({
-		x: 43 * scale,
+		x: x0 * scale,
 		y: mpUI.y - 9 * scale,
 		anchorX: 0,
 		anchorY: 1,
@@ -711,7 +726,7 @@ function funcShowHeroInfo() {
 
 // 更新血槽, 防御槽和气槽
 function funcUpdateHeroInfo(type) {
-	var layer = control.layerScene.children[1];
+	var layer = control.layerScene.children[2];
 	var layerTop = layer.children[0].children;
 	var layerBottom = layer.children[1].children;
 	var scale = config.scaleUI;
