@@ -12,7 +12,6 @@ var config = {
 	mpStep: 1,
 	dpLimit: 128,
 	dpStep: 8,
-	scaleUI: 2,
 };
 var control = {
 	winWidth: 0,
@@ -29,6 +28,7 @@ var control = {
 	touchListener: {}, // 触控事件
 	stageNum: 1,
 	stageData: {},
+	scaleUI: 2,
 };
 var res = {
 	img: config.imgPath + 'sprite.png',
@@ -100,7 +100,6 @@ window.onload = function() {
 
 					// 舞台层
 					var layerStage = cc.LayerColor.create(cc.color(255, 0, 0, 0), w, w);
-					layerStage.attr({ y: 64 });
 					control.layerScene.addChild(layerStage);
 
 					// 格子背景层
@@ -231,7 +230,7 @@ function funcInit() {
 				x: x,
 				y: y,
 				scale: control.zoom,
-				opacity: 192,
+				opacity: 168,
 			});
 			layer.children[0].addChild(bg);
 
@@ -579,157 +578,106 @@ function funcFill() {
 function funcShowHeroInfo() {
 	var w = control.winWidth, h = control.winHeight;
 	var obj = control.layerScene.children[1];
-	var scale = config.scaleUI;
 	var hero = game.hero;
+	var scale = w / 2.5 / 112;
+	scale = scale.toFixed(3) - 0;
+	control.scaleUI = scale;
 
-	var layer = cc.Layer.create();
-	layer.attr({ width: w, height: h });
-	control.layerScene.addChild(layer);
-
-	var layerTop = cc.LayerColor.create(cc.color(255, 0, 0, 0), w, h - obj.height - obj.y);
-	layerTop.attr({ y: obj.y + obj.height });
-	layer.addChild(layerTop);
+	var layerUI = cc.LayerColor.create(funcColor('#000000'), 0, 0);
+	layerUI.attr({
+		y: h,
+		scale: scale,
+	});
+	control.layerScene.addChild(layerUI);
 
 	var hpUI = cc.Sprite.create(res.img, cc.rect(0, 64, 112, 32));
 	hpUI.attr({
-		y: layerTop.height,
+		y: 0,
 		anchorX: 0,
 		anchorY: 1,
-		scale: scale,
 	});
-	layerTop.addChild(hpUI);
+	layerUI.addChild(hpUI);
 
-	var hp0 = cc.Sprite.create(res.img, cc.rect(114, 81, 1, 6));
-	hp0.attr({
-		x: 32 * scale,
-		y: hpUI.y - 17 * scale,
-		anchorX: 0,
-		anchorY: 1,
-		scaleY: scale,
-		scaleX: 0,
-	});
-	layerTop.addChild(hp0);
-	var hp1 = cc.Sprite.create(res.img, cc.rect(116, 81, 1, 6));
-	hp1.attr({
-		x: 32 * scale,
-		y: hpUI.y - 17 * scale,
-		anchorX: 0,
-		anchorY: 1,
-		scaleY: scale,
-		scaleX: 0,
-	});
-	layerTop.addChild(hp1);
-	var hp2 = cc.Sprite.create(res.img, cc.rect(118, 81, 1, 6));
-	hp2.attr({
-		x: 32 * scale,
-		y: hpUI.y - 17 * scale,
-		anchorX: 0,
-		anchorY: 1,
-		scaleY: scale,
-		scaleX: 0,
-	});
-	layerTop.addChild(hp2);
-	var hp3 = cc.Sprite.create(res.img, cc.rect(120, 81, 1, 6));
-	hp3.attr({
-		x: 32 * scale,
-		y: hpUI.y - 17 * scale,
-		anchorX: 0,
-		anchorY: 1,
-		scaleY: scale,
-		scaleX: 0,
-	});
-	layerTop.addChild(hp3);
+	var colors = ['#f82040', '#f89000', '#00e800', '#68b8d0'];
+	for (var i = 0; i < colors.length; i += 1) {
+		var color = colors[i];
+		var hpBar = cc.LayerColor.create(funcColor(color), 0, 6);
+		hpBar.attr({ x: 32, y: -23 });
+		layerUI.addChild(hpBar);
+	}
 
-	var dp = cc.LayerColor.create(funcColor('#00e800'), 0, 2 * scale);
-	dp.attr({
-		x: 32 * scale,
-		y: hpUI.y - 28 * scale,
-	});
-	layerTop.addChild(dp);
+	var hpBorderTop = cc.LayerColor.create(cc.color(255, 255, 255, 192), 64, 1);
+	hpBorderTop.attr({ x: 32, y: -18 });
+	layerUI.addChild(hpBorderTop);
+	var hpBorderBottom = cc.LayerColor.create(cc.color(0, 0, 0, 128), 64, 1);
+	hpBorderBottom.attr({ x: 32, y: -23 });
+	layerUI.addChild(hpBorderBottom);
+
+	var dp = cc.LayerColor.create(funcColor('#00e800'), 0, 2);
+	dp.attr({ x: 32, y: -28 });
+	layerUI.addChild(dp);
 
 	var name = cc.LabelTTF.create(hero.name, '黑体', 16);
 	name.attr({
-		x: 32 * scale,
-		y: hpUI.y - 8 * scale,
+		x: 32,
+		y: -1,
 		anchorX: 0,
 		anchorY: 1,
-		lineWidth: 2,
+		lineWidth: 1,
 		strokeStyle: cc.color(0, 0, 0, 255),
 	});
-	layerTop.addChild(name);
-
-	var layerBottom = cc.LayerColor.create(cc.color(0, 255, 0, 0), w, 64);
-	layer.addChild(layerBottom);
+	layerUI.addChild(name);
 
 	var mpUI = cc.Sprite.create(res.img, cc.rect(2, 98, 20, 19));
 	mpUI.attr({
-		x: 32 * scale,
-		y: layerBottom.height - 8 * scale,
+		x: 8,
+		y: -(h - obj.y - obj.height - 19 * scale - 8) / scale,
 		anchorX: 0,
 		anchorY: 1,
-		scale: scale,
 	});
-	layerBottom.addChild(mpUI);
+	layerUI.addChild(mpUI);
 
-	var x0 = 51;
-	var ii = Math.round(hero.mpFull / 8);
+	var x0 = 27;
+	var ii = 4;
 	for (var i = 0; i < ii; i += 1) {
 		var mpLoader = cc.Sprite.create(res.img, cc.rect(24, 106, 16, 8));
 		mpLoader.attr({
-			x: (16 * i + x0) * scale,
-			y: mpUI.y - 7 * scale,
+			x: 16 * i + x0,
+			y: mpUI.y - 7,
 			anchorX: 0,
 			anchorY: 1,
-			scale: scale,
 		});
-		layerBottom.addChild(mpLoader);
+		layerUI.addChild(mpLoader);
 	}
 
 	var mpLoader2 = cc.Sprite.create(res.img, cc.rect(48, 106, 5, 8));
 	mpLoader2.attr({
-		x: (16 * ii + x0) * scale,
-		y: mpUI.y - 7 * scale,
+		x: 16 * ii + x0,
+		y: mpUI.y - 7,
 		anchorX: 0,
 		anchorY: 1,
-		scale: scale,
 	});
-	layerBottom.addChild(mpLoader2);
+	layerUI.addChild(mpLoader2);
 
-	var mp0 = cc.Sprite.create(res.img, cc.rect(56, 108, 1, 4));
-	mp0.attr({
-		x: x0 * scale,
-		y: mpUI.y - 9 * scale,
-		anchorX: 0,
-		anchorY: 1,
-		scaleY: scale,
-	});
-	layerBottom.addChild(mp0);
-	var mp1 = cc.Sprite.create(res.img, cc.rect(58, 108, 1, 4));
-	mp1.attr({
-		x: x0 * scale,
-		y: mpUI.y - 9 * scale,
-		anchorX: 0,
-		anchorY: 1,
-		scaleY: scale,
-	});
-	layerBottom.addChild(mp1);
-	var mp2 = cc.Sprite.create(res.img, cc.rect(60, 108, 1, 4));
-	mp2.attr({
-		x: x0 * scale,
-		y: mpUI.y - 9 * scale,
-		anchorX: 0,
-		anchorY: 1,
-		scaleY: scale,
-	});
-	layerBottom.addChild(mp2);
+	colors = ['#f0a040', '#f8f800', '#f82040'];
+	for (var i = 0; i < colors.length; i += 1) {
+		var color = colors[i];
+		var mpBar = cc.LayerColor.create(funcColor(color), 0, 4);
+		mpBar.attr({ x: x0, y: mpUI.y - 13 });
+		layerUI.addChild(mpBar);
+	}
+
+	var mpBorderTop = cc.LayerColor.create(cc.color(0, 0, 0, 80), 64, 1);
+	mpBorderTop.attr({ x: x0, y: mpUI.y - 10 });
+	layerUI.addChild(mpBorderTop);
+	var mpBorderBottom = cc.LayerColor.create(cc.color(0, 0, 0, 80), 64, 1);
+	mpBorderBottom.attr({ x: x0, y: mpUI.y - 13 });
+	layerUI.addChild(mpBorderBottom);
 }
 
 // 更新血槽, 防御槽和气槽
 function funcUpdateHeroInfo(type) {
-	var layer = control.layerScene.children[2];
-	var layerTop = layer.children[0].children;
-	var layerBottom = layer.children[1].children;
-	var scale = config.scaleUI;
+	var layerUI = control.layerScene.children[2].children;
 	var hero = game.hero;
 	var hpLine = config.hpLine;
 
@@ -743,21 +691,19 @@ function funcUpdateHeroInfo(type) {
 		if (hero.hp % hpLine) hp.push(hero.hp % hpLine);
 
 		for (var i = 0; i < hp.length; i += 1) {
-			layerTop[i + 1].attr({ scaleX: hp[i] / scale });
+			layerUI[i + 1].attr({ width: hp[i] / 4 });
 		}
 	}
 
 	if (!type || type === 'dp') {
-		layerTop[5].attr({ width: hero.dp / scale });
+		layerUI[7].attr({ width: hero.dp / 4 });
 	}
 
 	if (!type || type === 'mp') {
-		var len = layerBottom.length;
 		var mpFix = parseInt(hero.mp / 8) * 8;
-		layerBottom[len - 3].attr({ scaleX: hero.mp * 4 });
-		layerBottom[len - 2].attr({ scaleX: mpFix * 4 });
-		if (hero.mpGather > 0) {
-			layerBottom[len - 1].attr({ scaleX: hero.mpGather * 4 });
-		}
+		layerUI[15].attr({ width: hero.mp * 2 });
+		layerUI[16].attr({ width: mpFix * 2 });
+		if (hero.mpGather > 0)
+			layerUI[17].attr({ width: hero.mpGather * 2 });
 	}
 }
