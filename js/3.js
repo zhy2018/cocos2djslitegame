@@ -24,7 +24,7 @@ var control = {
 	roleNum: 4,
 	firstRole: false, // 第一次点击的格子(首次, 之前的)
 	currentRole: false, // 第二次点击的格子(当前的)
-	acceptTouch: true, // 是否响应触控事件
+	acceptTouch: false, // 是否响应触控事件
 	touchListener: {}, // 触控事件
 	stageNum: 1,
 	stageData: {},
@@ -109,7 +109,7 @@ window.onload = function() {
 						var time = times[i];
 						var sprite = cc.Sprite.create(
 							res.bg,
-							cc.rect(i < 4 ? bg.width : 0, data[0], bg.width, data[1]),
+							cc.rect(i < 4 ? bg.width : 0, data[0], bg.width, data[1])
 						);
 						sprite.attr({
 							y: -data[0],
@@ -119,14 +119,11 @@ window.onload = function() {
 						layer.addChild(sprite);
 						sprite.runAction(cc.repeatForever(cc.sequence(
 							cc.moveTo(time, cc.p(-bg.width, -data[0])),
-							cc.moveTo(0, cc.p(i < 4 ? bg.width : 0, -data[0])),
+							cc.moveTo(0, cc.p(i < 4 ? bg.width : 0, -data[0]))
 						)));
 
 						if (i >= 4) {
-							var sprite2 = cc.Sprite.create(
-								res.bg,
-								cc.rect(0, data[0], bg.width, data[1]),
-							);
+							var sprite2 = cc.Sprite.create(res.bg, cc.rect(0, data[0], bg.width, data[1]));
 							sprite2.attr({
 								x: bg.width,
 								y: -data[0],
@@ -136,7 +133,7 @@ window.onload = function() {
 							layer.addChild(sprite2);
 							sprite2.runAction(cc.repeatForever(cc.sequence(
 								cc.moveTo(time, cc.p(0, -data[0])),
-								cc.moveTo(0, cc.p(bg.width, -data[0])),
+								cc.moveTo(0, cc.p(bg.width, -data[0]))
 							)));
 						}
 					}
@@ -181,11 +178,67 @@ window.onload = function() {
 							btn.scheduleOnce(function() {
 								mask.runAction(cc.FadeIn.create(0.5));
 								btn.scheduleOnce(function() {
-									cc.director.runScene(new sceneMain());
+									cc.director.runScene(new sceneMap());
 								}, 0.5);
 							}, 0.5);
 						}
 					}, btn);
+				},
+				onExit: function() {
+					this._super();
+					cc.eventManager.removeListener(cc.EventListener.TOUCH_ONE_BY_ONE);
+				},
+			});
+
+			var sceneMap = cc.Scene.extend({
+				onEnter: function() {
+					this._super();
+					w = control.winWidth;
+					h = control.winHeight;
+					var scale = h / 320;
+					scale = scale.toFixed(3) - 0;
+
+					// 底层
+					var layer = cc.Layer.create();
+					layer.attr({
+						y: h,
+						anchorX: 0,
+						anchorY: 0,
+						scale: scale,
+					});
+					this.addChild(layer);
+
+					// 背景图
+					var bg = cc.Sprite.create(res.bg, cc.rect(0, 256, 480, 320));
+					bg.attr({
+						anchorX: 0,
+						anchorY: 1,
+					});
+					layer.addChild(bg);
+
+					var mask = cc.LayerColor.create(funcColor('#000000'), w, h);
+					this.addChild(mask);
+					mask.runAction(cc.FadeOut.create(0.5));
+
+					cc.eventManager.addListener({
+						event: cc.EventListener.TOUCH_ONE_BY_ONE,
+						onTouchBegan: function(touch, e) {
+							var target = e.getCurrentTarget();
+							var loc = target.convertToNodeSpace(touch.getLocation());
+							cc.log('onTouchBegan', touch.getLocation(), loc);
+							return true;
+						},
+						onTouchMoved: function(touch, e) {
+							var target = e.getCurrentTarget();
+							var loc = target.convertToNodeSpace(touch.getLocation());
+							cc.log('onTouchMoved', touch.getLocation(), loc);
+						},
+						onTouchEnded: function(touch, e) {
+							var target = e.getCurrentTarget();
+							var loc = target.convertToNodeSpace(touch.getLocation());
+							cc.log('onTouchEnded', touch.getLocation(), loc);
+						},
+					}, bg);
 				},
 				onExit: function() {
 					this._super();
@@ -217,7 +270,7 @@ window.onload = function() {
 					// 背景图
 					var scale = w / 264;
 					scale = scale.toFixed(3) - 0;
-					var bg = cc.Sprite.create(res.bg, cc.rect(0, 256, 264, 208));
+					var bg = cc.Sprite.create(res.bg, cc.rect(0, 576, 264, 208));
 					bg.attr({
 						y: h,
 						anchorX: 0,
@@ -226,9 +279,16 @@ window.onload = function() {
 					});
 					control.layerScene.addChild(bg);
 
+					funcShowHeroInfo();
+					funcUpdateHeroInfo();
+
 					// 舞台层
 					var layerStage = cc.LayerColor.create(cc.color(255, 0, 0, 0), w, w);
 					control.layerScene.addChild(layerStage);
+
+					// 消息层
+					var layerInfo = cc.Layer.create();
+					control.layerScene.addChild(layerInfo);
 
 					// 格子背景层
 					var layerStageBg = cc.Layer.create();
@@ -281,11 +341,26 @@ window.onload = function() {
 					cc.loader.loadJson(res.stage, function(_, data) {
 						control.stageData = data;
 						funcInit();
-						mask.runAction(cc.FadeOut.create(0.5));
-					});
 
-					funcShowHeroInfo();
-					funcUpdateHeroInfo();
+						var sprite;
+						mask.runAction(cc.FadeOut.create(0.5));
+						mask.scheduleOnce(function() {
+							sprite = cc.Sprite.create(res.img, cc.rect(0, 220, 117, 36));
+							sprite.attr({
+								x: w / 2,
+								y: h / 2,
+								scale: scale,
+							});
+							layerInfo.addChild(sprite);
+						}, 0.5);
+						mask.scheduleOnce(function() {
+							sprite.setTextureRect(cc.rect(120, 220, 65, 35));
+						}, 1);
+						mask.scheduleOnce(function() {
+							layerInfo.removeAllChildren();
+							control.acceptTouch = true;
+						}, 1.5);
+					});
 				},
 				onExit: function() {
 					this._super();
@@ -337,7 +412,7 @@ function funcInit() {
 	}
 
 	control.roles = {};
-	var layer = control.layerScene.children[1];
+	var layer = control.layerScene.children[2];
 	layer.children[0].removeAllChildren();
 	layer.children[1].removeAllChildren();
 
@@ -433,7 +508,7 @@ function funcPress() {
 // 取消两个角色位置的交换
 function funcCancel(role) {
 	var role0 = control.firstRole;
-	var border = control.layerScene.children[1].children[2];
+	var border = control.layerScene.children[2].children[2];
 	border.attr({ visible: false });
 	var time = config.time;
 	var x0 = role0.x;
@@ -462,7 +537,7 @@ function funcCancel(role) {
 // 交换两个角色的位置
 function funcSwitch(role, cb) {
 	var role0 = control.firstRole;
-	var border = control.layerScene.children[1].children[2];
+	var border = control.layerScene.children[2].children[2];
 	border.attr({ visible: false });
 	var time = config.time;
 	var x0 = role0.x;
@@ -542,7 +617,7 @@ function funcCheck() {
 // 移除连续的格子(带有移除标记的格子)
 function funcRemove() {
 	var maps = control.maps, roles = control.roles, zoom = control.zoom;
-	var layer = control.layerScene.children[1];
+	var layer = control.layerScene.children[2];
 	var time = config.time, roleSize = config.roleSize;
 
 	var sum = [];
@@ -605,7 +680,7 @@ function funcRemove() {
 function funcFall() {
 	var maps = control.maps, zoom = control.zoom;
 	var roles = control.roles;
-	var layer = control.layerScene.children[1];
+	var layer = control.layerScene.children[2];
 	var time = config.time, tileSize = config.tileSize;
 	var distance = 0, distanceMax = 0;
 
@@ -659,7 +734,7 @@ function funcFall() {
 function funcFill() {
 	var maps = control.maps;
 	var roles = control.roles;
-	var layer = control.layerScene.children[1];
+	var layer = control.layerScene.children[2];
 	var time = config.time, tileSize = config.tileSize, roleSize = config.roleSize;
 	var mapSize = control.mapSize, zoom = control.zoom;
 	var distance = 0, distanceMax = 0;
@@ -704,7 +779,6 @@ function funcFill() {
 // 显示血槽, 防御槽和气槽
 function funcShowHeroInfo() {
 	var w = control.winWidth, h = control.winHeight;
-	var obj = control.layerScene.children[1];
 	var hero = game.hero;
 	var scale = w / 2.5 / 112;
 	scale = scale.toFixed(3) - 0;
@@ -717,32 +791,36 @@ function funcShowHeroInfo() {
 	});
 	control.layerScene.addChild(layerUI);
 
+	var layerHP = cc.Layer.create();
+	layerHP.attr({ y: 32 });
+	layerUI.addChild(layerHP);
+
 	var hpUI = cc.Sprite.create(res.img, cc.rect(0, 64, 112, 32));
 	hpUI.attr({
 		y: 0,
 		anchorX: 0,
 		anchorY: 1,
 	});
-	layerUI.addChild(hpUI);
+	layerHP.addChild(hpUI);
 
 	var colors = ['#f82040', '#f89000', '#00e800', '#68b8d0'];
 	for (var i = 0; i < colors.length; i += 1) {
 		var color = colors[i];
 		var hpBar = cc.LayerColor.create(funcColor(color), 0, 6);
 		hpBar.attr({ x: 32, y: -23 });
-		layerUI.addChild(hpBar);
+		layerHP.addChild(hpBar);
 	}
 
 	var hpBorderTop = cc.LayerColor.create(cc.color(255, 255, 255, 192), 64, 1);
 	hpBorderTop.attr({ x: 32, y: -18 });
-	layerUI.addChild(hpBorderTop);
+	layerHP.addChild(hpBorderTop);
 	var hpBorderBottom = cc.LayerColor.create(cc.color(0, 0, 0, 128), 64, 1);
 	hpBorderBottom.attr({ x: 32, y: -23 });
-	layerUI.addChild(hpBorderBottom);
+	layerHP.addChild(hpBorderBottom);
 
 	var dp = cc.LayerColor.create(funcColor('#00e800'), 0, 2);
 	dp.attr({ x: 32, y: -28 });
-	layerUI.addChild(dp);
+	layerHP.addChild(dp);
 
 	var name = cc.LabelTTF.create(hero.name, '黑体', 16);
 	name.attr({
@@ -753,16 +831,21 @@ function funcShowHeroInfo() {
 		lineWidth: 1,
 		strokeStyle: cc.color(0, 0, 0, 255),
 	});
-	layerUI.addChild(name);
+	layerHP.addChild(name);
+	layerHP.runAction(cc.moveTo(0.5, cc.p(0, 0)));
+
+	var layerMP = cc.Layer.create();
+	layerMP.attr({ y: -32 });
+	layerUI.addChild(layerMP);
 
 	var mpUI = cc.Sprite.create(res.img, cc.rect(2, 98, 20, 19));
 	mpUI.attr({
 		x: 8,
-		y: -(h - obj.y - obj.height - 19 * scale - 8) / scale,
+		y: -(h - w - 19 * scale - 8) / scale,
 		anchorX: 0,
 		anchorY: 1,
 	});
-	layerUI.addChild(mpUI);
+	layerMP.addChild(mpUI);
 
 	var x0 = 27;
 	var ii = 4;
@@ -774,7 +857,7 @@ function funcShowHeroInfo() {
 			anchorX: 0,
 			anchorY: 1,
 		});
-		layerUI.addChild(mpLoader);
+		layerMP.addChild(mpLoader);
 	}
 
 	var mpLoader2 = cc.Sprite.create(res.img, cc.rect(48, 106, 5, 8));
@@ -784,27 +867,30 @@ function funcShowHeroInfo() {
 		anchorX: 0,
 		anchorY: 1,
 	});
-	layerUI.addChild(mpLoader2);
+	layerMP.addChild(mpLoader2);
 
 	colors = ['#f0a040', '#f8f800', '#f82040'];
 	for (var i = 0; i < colors.length; i += 1) {
 		var color = colors[i];
 		var mpBar = cc.LayerColor.create(funcColor(color), 0, 4);
 		mpBar.attr({ x: x0, y: mpUI.y - 13 });
-		layerUI.addChild(mpBar);
+		layerMP.addChild(mpBar);
 	}
 
 	var mpBorderTop = cc.LayerColor.create(cc.color(0, 0, 0, 80), 64, 1);
 	mpBorderTop.attr({ x: x0, y: mpUI.y - 10 });
-	layerUI.addChild(mpBorderTop);
+	layerMP.addChild(mpBorderTop);
 	var mpBorderBottom = cc.LayerColor.create(cc.color(0, 0, 0, 80), 64, 1);
 	mpBorderBottom.attr({ x: x0, y: mpUI.y - 13 });
-	layerUI.addChild(mpBorderBottom);
+	layerMP.addChild(mpBorderBottom);
+	layerMP.runAction(cc.moveTo(0.5, cc.p(0, 0)));
 }
 
 // 更新血槽, 防御槽和气槽
 function funcUpdateHeroInfo(type) {
-	var layerUI = control.layerScene.children[2].children;
+	var layerUI = control.layerScene.children[1].children;
+	var layerHP = layerUI[0].children;
+	var layerMP = layerUI[1].children;
 	var hero = game.hero;
 	var hpLine = config.hpLine;
 
@@ -818,19 +904,19 @@ function funcUpdateHeroInfo(type) {
 		if (hero.hp % hpLine) hp.push(hero.hp % hpLine);
 
 		for (var i = 0; i < hp.length; i += 1) {
-			layerUI[i + 1].attr({ width: hp[i] / 4 });
+			layerHP[i + 1].attr({ width: hp[i] / 4 });
 		}
 	}
 
 	if (!type || type === 'dp') {
-		layerUI[7].attr({ width: hero.dp / 4 });
+		layerHP[7].attr({ width: hero.dp / 4 });
 	}
 
 	if (!type || type === 'mp') {
 		var mpFix = parseInt(hero.mp / 8) * 8;
-		layerUI[15].attr({ width: hero.mp * 2 });
-		layerUI[16].attr({ width: mpFix * 2 });
+		layerMP[6].attr({ width: hero.mp * 2 });
+		layerMP[7].attr({ width: mpFix * 2 });
 		if (hero.mpGather > 0)
-			layerUI[17].attr({ width: hero.mpGather * 2 });
+			layerMP[8].attr({ width: hero.mpGather * 2 });
 	}
 }
